@@ -1,6 +1,3 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import { getTrendingMovies, getTrendingTV } from '@/lib/tmdb';
 import Header from '@/components/Header';
 import Link from 'next/link';
