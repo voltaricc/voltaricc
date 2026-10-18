@@ -1,13 +1,13 @@
 import { getTrendingMovies, getTrendingTV } from '@/lib/tmdb';
 import Header from '@/components/Header';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export default async function HomePage() {
+// Separate async component for user-specific Continue Watching
+async function ContinueWatchingSection() {
   let continueWatching: any[] = [];
-
-  // Safe server-side fetch wrapped in try/catch to prevent build failures
   try {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -16,25 +16,14 @@ export default async function HomePage() {
       {
         cookies: {
           getAll() {
-            try {
-              return cookieStore.getAll();
-            } catch {
-              return [];
-            }
+            try { return cookieStore.getAll(); } catch { return []; }
           },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {}
-          },
+          setAll() {},
         },
       }
     );
 
     const { data: { user } } = await supabase.auth.getUser();
-
     if (user) {
       const { data } = await supabase
         .from('watch_history')
@@ -45,17 +34,63 @@ export default async function HomePage() {
 
       if (data) continueWatching = data;
     }
-  } catch (err) {
-    // Fallback if environment context is absent during build
-  }
+  } catch {}
 
-  // Fetch TMDB Content
+  if (continueWatching.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="text-lg md:text-xl font-bold mb-4 text-white flex items-center gap-2">
+        <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
+        Continue Watching
+      </h2>
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
+        {continueWatching.map((item) => (
+          <Link
+            key={`${item.media_type}-${item.media_id}`}
+            href={
+              item.media_type === 'tv'
+                ? `/tv/${item.media_id}?season=${item.last_season || 1}&episode=${item.last_episode || 1}`
+                : `/watch/${item.media_id}`
+            }
+            className="shrink-0 w-36 md:w-44"
+          >
+            <div className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
+              <div className="aspect-[2/3] w-full bg-neutral-950 relative">
+                <img
+                  src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <span className="bg-sky-500 text-black font-bold text-xs px-3 py-1.5 rounded-full">
+                    ▶ Resume
+                  </span>
+                </div>
+              </div>
+              <div className="p-2.5">
+                <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
+                  {item.title}
+                </h3>
+                {item.media_type === 'tv' && (
+                  <p className="text-[10px] text-sky-400 font-medium mt-0.5">
+                    S{item.last_season || 1} E{item.last_episode || 1}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default async function HomePage() {
   const movies = await getTrendingMovies();
   const tvShows = await getTrendingTV();
-
   const featuredMovie = movies[0];
 
-  // Derive New Releases (sorted by release date)
   const newReleases = [...movies].sort((a, b) => {
     return new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime();
   });
@@ -97,53 +132,10 @@ export default async function HomePage() {
       )}
 
       <div className="space-y-10 px-6 md:px-10">
-        {/* ROW 1: Continue Watching (Only displays when user is signed in & has watch history) */}
-        {continueWatching.length > 0 && (
-          <section>
-            <h2 className="text-lg md:text-xl font-bold mb-4 text-white flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
-              Continue Watching
-            </h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
-              {continueWatching.map((item) => (
-                <Link
-                  key={`${item.media_type}-${item.media_id}`}
-                  href={
-                    item.media_type === 'tv'
-                      ? `/tv/${item.media_id}?season=${item.last_season || 1}&episode=${item.last_episode || 1}`
-                      : `/watch/${item.media_id}`
-                  }
-                  className="shrink-0 w-36 md:w-44"
-                >
-                  <div className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
-                    <div className="aspect-[2/3] w-full bg-neutral-950 relative">
-                      <img
-                        src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                        <span className="bg-sky-500 text-black font-bold text-xs px-3 py-1.5 rounded-full">
-                          ▶ Resume
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-2.5">
-                      <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
-                        {item.title}
-                      </h3>
-                      {item.media_type === 'tv' && (
-                        <p className="text-[10px] text-sky-400 font-medium mt-0.5">
-                          S{item.last_season || 1} E{item.last_episode || 1}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Suspense boundary for dynamic user content */}
+        <Suspense fallback={null}>
+          <ContinueWatchingSection />
+        </Suspense>
 
         {/* ROW 2: Popular Movies */}
         <section>
