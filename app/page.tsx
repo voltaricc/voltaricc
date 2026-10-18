@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { fetchHomePageData } from '@/app/actions/tmdb';
 
 export default function HomePage() {
   const [continueWatching, setContinueWatching] = useState<any[]>([]);
@@ -19,17 +20,10 @@ export default function HomePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch TMDb Content via client or API route if needed, or direct fetch
-        const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY; // Fallback or fetch from server action
-        
-        // Fetch trending movies and TV via TMDB helper / standard fetch
-        const movieRes = await fetch(`https://api.themoviedb.org/3/trending/movie/day?api_key=2ba31f5df8b898a96d11e5504fa770c9`);
-        const movieData = await movieRes.json();
-        setMovies(movieData.results || []);
-
-        const tvRes = await fetch(`https://api.themoviedb.org/3/trending/tv/day?api_key=2ba31f5df8b898a96d11e5504fa770c9`);
-        const tvData = await tvRes.json();
-        setTvShows(tvData.results || []);
+        // Fetch movies and TV shows securely via Server Action
+        const tmdbData = await fetchHomePageData();
+        setMovies(tmdbData.movies);
+        setTvShows(tmdbData.tvShows);
 
         // Fetch Supabase watch history if logged in
         const { data: { user } } = await supabase.auth.getUser();
@@ -44,7 +38,7 @@ export default function HomePage() {
           if (data) setContinueWatching(data);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load page data:', err);
       } finally {
         setLoading(false);
       }
