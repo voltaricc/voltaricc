@@ -1,49 +1,55 @@
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { getTrendingMovies, getTrendingTV } from '@/lib/tmdb';
 import Header from '@/components/Header';
 import Link from 'next/link';
-import { connection } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export const dynamic = 'force-dynamic'; // <-- Add this line here!
-
 export default async function HomePage() {
-  await connection();
-
-  // Fetch Supabase Session & Continue Watching
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {}
-        },
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-
   let continueWatching: any[] = [];
-  if (user) {
-    const { data } = await supabase
-      .from('watch_history')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(10);
 
-    if (data) continueWatching = data;
+  // Safe server-side fetch wrapped in try/catch to prevent build failures
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      {
+        cookies: {
+          getAll() {
+            try {
+              return cookieStore.getAll();
+            } catch {
+              return [];
+            }
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {}
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data } = await supabase
+        .from('watch_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+      if (data) continueWatching = data;
+    }
+  } catch (err) {
+    // Fallback if environment context is absent during build
   }
 
   // Fetch TMDB Content
