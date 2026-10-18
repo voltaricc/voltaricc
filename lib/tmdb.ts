@@ -53,9 +53,15 @@ export async function getNewReleases(): Promise<Media[]> {
     .filter((m) => m.release_date && m.release_date <= today)
     .sort((a, b) => (b.release_date || '').localeCompare(a.release_date || ''));
 }
-export type MovieDetails = Media & {
+export type MovieDetails = {
+  id: number;
   title: string;
-  runtime?: number;
+  poster_path: string;
+  backdrop_path: string | null;
+  overview: string;
+  vote_average: number;
+  release_date: string;
+  runtime: number;
 };
 
 // Gets the full details for one movie (used by the Watch page).
@@ -63,9 +69,12 @@ export async function getMovieDetails(id: string | number): Promise<MovieDetails
   const fallback: MovieDetails = {
     id: Number(id),
     title: 'Title unavailable',
-    poster_path: null,
+    poster_path: '',
     backdrop_path: null,
     overview: 'We could not load the details for this movie right now.',
+    vote_average: 0,
+    release_date: '',
+    runtime: 0,
   };
 
   const key = process.env.TMDB_API_KEY;
@@ -76,20 +85,30 @@ export async function getMovieDetails(id: string | number): Promise<MovieDetails
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error(`TMDb responded ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return {
+      ...data,
+      title: data.title ?? 'Untitled',
+      poster_path: data.poster_path ?? '',
+      overview: data.overview ?? '',
+      vote_average: data.vote_average ?? 0,
+      release_date: data.release_date ?? '',
+      runtime: data.runtime ?? 0,
+    };
   } catch (err) {
     console.error(`Could not load movie ${id}:`, err);
     return fallback;
   }
 }
+
 export type TVDetails = {
   id: number;
   name: string;
-  poster_path: string | null;
+  poster_path: string;
   backdrop_path: string | null;
-  overview?: string;
-  vote_average?: number;
-  first_air_date?: string;
+  overview: string;
+  vote_average: number;
+  first_air_date: string;
   number_of_seasons?: number;
   seasons?: {
     id: number;
@@ -105,9 +124,11 @@ export async function getTVDetails(id: string | number): Promise<TVDetails> {
   const fallback: TVDetails = {
     id: Number(id),
     name: 'Title unavailable',
-    poster_path: null,
+    poster_path: '',
     backdrop_path: null,
     overview: 'We could not load the details for this show right now.',
+    vote_average: 0,
+    first_air_date: '',
     number_of_seasons: 1,
     seasons: [{ id: 0, name: 'Season 1', season_number: 1, episode_count: 10, poster_path: null }],
   };
@@ -120,7 +141,15 @@ export async function getTVDetails(id: string | number): Promise<TVDetails> {
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error(`TMDb responded ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return {
+      ...data,
+      name: data.name ?? 'Untitled',
+      poster_path: data.poster_path ?? '',
+      overview: data.overview ?? '',
+      vote_average: data.vote_average ?? 0,
+      first_air_date: data.first_air_date ?? '',
+    };
   } catch (err) {
     console.error(`Could not load TV show ${id}:`, err);
     return fallback;
