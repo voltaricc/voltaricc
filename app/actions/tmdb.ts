@@ -1,7 +1,7 @@
 'use server';
 
 export async function fetchHomePageData() {
-  const apiKey = process.env.TMDB_API_KEY || '2ba31f5df8b898a96d11e5504fa770c9';
+  const apiKey = process.env.TMDB_API_KEY;
 
   try {
     const [moviesRes, tvRes] = await Promise.all([
