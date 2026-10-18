@@ -5,6 +5,8 @@ import { connection } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+export const dynamic = 'force-dynamic'; // <-- Add this line here!
+
 export default async function HomePage() {
   await connection();
 
