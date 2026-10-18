@@ -5,8 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';

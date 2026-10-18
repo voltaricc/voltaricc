@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
-import { fetchHomePageData } from '@/app/actions/tmdb';
 
 export default function HomePage() {
   const [continueWatching, setContinueWatching] = useState<any[]>([]);
@@ -20,10 +19,19 @@ export default function HomePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch movies and TV shows securely via Server Action
-        const tmdbData = await fetchHomePageData();
-        setMovies(tmdbData.movies);
-        setTvShows(tmdbData.tvShows);
+        const apiKey = '2ba31f5df8b898a96d11e5504fa770c9';
+
+        // Fetch movies and TV shows from TMDb API directly
+        const [movieRes, tvRes] = await Promise.all([
+          fetch(`https://api.themoviedb.org/3/trending/movie/day?api_key=${apiKey}`),
+          fetch(`https://api.themoviedb.org/3/trending/tv/day?api_key=${apiKey}`),
+        ]);
+
+        const movieData = await movieRes.json();
+        const tvData = await tvRes.json();
+
+        setMovies(movieData.results || []);
+        setTvShows(tvData.results || []);
 
         // Fetch Supabase watch history if logged in
         const { data: { user } } = await supabase.auth.getUser();
@@ -56,7 +64,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-black text-white font-sans pb-16">
       <Header />
 
-      {/* Featured Hero Banner */}
+      {/* Hero Banner */}
       {featuredMovie && (
         <section className="relative w-full h-[55vh] md:h-[65vh] flex items-end p-6 md:p-12 mb-8 overflow-hidden border-b border-neutral-900">
           <div className="absolute inset-0 z-0">
@@ -143,32 +151,36 @@ export default function HomePage() {
             <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
             Popular Movies
           </h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
-            {movies.map((movie: any) => (
-              <Link key={movie.id} href={`/watch/${movie.id}`} className="shrink-0 w-36 md:w-44">
-                <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
-                  <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
-                    <img
-                      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                      alt={movie.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                  </div>
-                  <div className="p-2.5">
-                    <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
-                      {movie.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
-                      <span>{movie.release_date?.slice(0, 4)}</span>
-                      <span className="text-sky-400 font-semibold">
-                        ★ {movie.vote_average?.toFixed(1)}
-                      </span>
+          {loading ? (
+            <div className="text-neutral-500 text-xs">Loading content...</div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
+              {movies.map((movie: any) => (
+                <Link key={movie.id} href={`/watch/${movie.id}`} className="shrink-0 w-36 md:w-44">
+                  <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
+                    <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                        alt={movie.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </div>
+                    <div className="p-2.5">
+                      <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
+                        {movie.title}
+                      </h3>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
+                        <span>{movie.release_date?.slice(0, 4)}</span>
+                        <span className="text-sky-400 font-semibold">
+                          ★ {movie.vote_average?.toFixed(1)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ROW 3: Popular TV Shows */}
@@ -177,32 +189,36 @@ export default function HomePage() {
             <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
             Popular TV Shows
           </h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
-            {tvShows.map((show: any) => (
-              <Link key={show.id} href={`/tv/${show.id}`} className="shrink-0 w-36 md:w-44">
-                <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
-                  <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
-                    <img
-                      src={`https://image.tmdb.org/t/p/w500${show.poster_path}`}
-                      alt={show.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                  </div>
-                  <div className="p-2.5">
-                    <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
-                      {show.name}
-                    </h3>
-                    <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
-                      <span>{show.first_air_date?.slice(0, 4)}</span>
-                      <span className="text-sky-400 font-semibold">
-                        ★ {show.vote_average?.toFixed(1)}
-                      </span>
+          {loading ? (
+            <div className="text-neutral-500 text-xs">Loading content...</div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
+              {tvShows.map((show: any) => (
+                <Link key={show.id} href={`/tv/${show.id}`} className="shrink-0 w-36 md:w-44">
+                  <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
+                    <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${show.poster_path}`}
+                        alt={show.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </div>
+                    <div className="p-2.5">
+                      <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
+                        {show.name}
+                      </h3>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
+                        <span>{show.first_air_date?.slice(0, 4)}</span>
+                        <span className="text-sky-400 font-semibold">
+                          ★ {show.vote_average?.toFixed(1)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ROW 4: New Releases */}
@@ -211,32 +227,36 @@ export default function HomePage() {
             <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
             New Releases
           </h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
-            {newReleases.map((movie: any) => (
-              <Link key={movie.id} href={`/watch/${movie.id}`} className="shrink-0 w-36 md:w-44">
-                <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
-                  <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
-                    <img
-                      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                      alt={movie.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                  </div>
-                  <div className="p-2.5">
-                    <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
-                      {movie.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
-                      <span>{movie.release_date?.slice(0, 4)}</span>
-                      <span className="text-sky-400 font-semibold">
-                        ★ {movie.vote_average?.toFixed(1)}
-                      </span>
+          {loading ? (
+            <div className="text-neutral-500 text-xs">Loading content...</div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
+              {newReleases.map((movie: any) => (
+                <Link key={movie.id} href={`/watch/${movie.id}`} className="shrink-0 w-36 md:w-44">
+                  <div className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300 hover:-translate-y-1">
+                    <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                        alt={movie.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </div>
+                    <div className="p-2.5">
+                      <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
+                        {movie.title}
+                      </h3>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
+                        <span>{movie.release_date?.slice(0, 4)}</span>
+                        <span className="text-sky-400 font-semibold">
+                          ★ {movie.vote_average?.toFixed(1)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
