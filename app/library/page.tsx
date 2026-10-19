@@ -1,155 +1,161 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import Header from '@/components/Header';
 import Link from 'next/link';
+import Header from '@/components/Header';
+import PosterCard from '@/components/PosterCard';
+import { getSupabase } from '@/lib/supabase/client';
+
+type WatchlistItem = {
+  id: string;
+  media_id: number;
+  media_type: 'movie' | 'tv';
+  title: string;
+  poster_path: string | null;
+  vote_average: number | null;
+};
+
+type HistoryItem = {
+  id: string;
+  media_id: number;
+  media_type: 'movie' | 'tv';
+  title: string;
+  poster_path: string | null;
+  season: number | null;
+  episode: number | null;
+};
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<'watchlist' | 'history'>('watchlist');
-  const [watchlist, setWatchlist] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
+  const [signedIn, setSignedIn] = useState(true);
 
   useEffect(() => {
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const supabase = getSupabase();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setSignedIn(false);
+          return;
+        }
+
+        const [wl, hist] = await Promise.all([
+          supabase
+            .from('watchlist')
+            .select('id, media_id, media_type, title, poster_path, vote_average')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('watch_history')
+            .select('id, media_id, media_type, title, poster_path, season, episode')
+            .eq('user_id', user.id)
+            .order('watched_at', { ascending: false })
+            .limit(200),
+        ]);
+
+        if (wl.error) console.error('Watchlist error:', wl.error);
+        if (hist.error) console.error('History error:', hist.error);
+
+        if (wl.data) setWatchlist(wl.data as WatchlistItem[]);
+
+        const seen = new Set<string>();
+        const unique = ((hist.data ?? []) as HistoryItem[]).filter((row) => {
+          const key = `${row.media_type}-${row.media_id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setHistory(unique);
+      } catch (err) {
+        console.error('Could not load library:', err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data: wlData } = await supabase
-        .from('watchlist')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const { data: histData } = await supabase
-        .from('watch_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('watched_at', { ascending: false });
-
-      if (wlData) setWatchlist(wlData);
-      if (histData) setHistory(histData);
-      setLoading(false);
     }
 
     loadData();
   }, []);
 
+  const tabClass = (active: boolean) =>
+    `text-sm font-bold pb-2 transition border-b-2 cursor-pointer ${
+      active ? 'border-sky-400 text-white' : 'border-transparent text-neutral-400 hover:text-white'
+    }`;
+
+  const grid =
+    'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4';
+
   return (
-    <main className="min-h-screen bg-neutral-950 text-white font-sans pb-12">
+    <main className="min-h-screen bg-black text-white font-sans pb-16">
       <Header />
 
-      <section className="px-6 md:px-10 pt-8 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-extrabold mb-6 tracking-tight">My Library</h1>
+      <section className="px-4 md:px-10 pt-6 max-w-7xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-extrabold mb-6 tracking-tight">My Library</h1>
 
-        {/* Tab Switcher */}
-        <div className="flex gap-4 border-b border-neutral-800 pb-4 mb-8">
-          <button
-            onClick={() => setActiveTab('watchlist')}
-            className={`text-sm font-bold pb-2 transition border-b-2 ${
-              activeTab === 'watchlist'
-                ? 'border-red-600 text-white'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
-            My Watchlist ({watchlist.length})
+        <div className="flex gap-6 border-b border-neutral-800 mb-8">
+          <button onClick={() => setActiveTab('watchlist')} className={tabClass(activeTab === 'watchlist')}>
+            My List ({watchlist.length})
           </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`text-sm font-bold pb-2 transition border-b-2 ${
-              activeTab === 'history'
-                ? 'border-red-600 text-white'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
+          <button onClick={() => setActiveTab('history')} className={tabClass(activeTab === 'history')}>
             Recently Watched ({history.length})
           </button>
         </div>
 
         {loading ? (
           <p className="text-neutral-400 text-sm">Loading your library...</p>
+        ) : !signedIn ? (
+          <p className="text-neutral-400 text-sm">Sign in to see your saved titles and history.</p>
         ) : activeTab === 'watchlist' ? (
           watchlist.length === 0 ? (
-            <p className="text-neutral-400 text-sm">Your watchlist is empty. Add titles from any movie or show page!</p>
+            <p className="text-neutral-400 text-sm">
+              Your list is empty. Add titles from any movie or show page!
+            </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-              {watchlist.map((item) => {
-                const linkHref = item.media_type === 'movie' ? `/watch/${item.media_id}` : `/tv/${item.media_id}`;
-                return (
-                  <Link key={item.id} href={linkHref}>
-                    <div className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-700 transition hover:-translate-y-1">
-                      <div className="aspect-[2/3] w-full bg-neutral-800 relative">
-                        <span className={`absolute top-2 left-2 z-10 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${
-                          item.media_type === 'movie' ? 'bg-red-600' : 'bg-blue-600'
-                        }`}>
-                          {item.media_type === 'movie' ? 'Movie' : 'TV Series'}
-                        </span>
-                        {item.poster_path && (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition"
-                          />
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-semibold text-sm truncate text-neutral-100 group-hover:text-red-400">
-                          {item.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className={grid}>
+              {watchlist.map((item) => (
+                <PosterCard
+                  key={item.id}
+                  className="w-full"
+                  href={item.media_type === 'movie' ? `/watch/${item.media_id}` : `/tv/${item.media_id}`}
+                  title={item.title}
+                  posterPath={item.poster_path}
+                  rating={item.vote_average ?? undefined}
+                />
+              ))}
             </div>
           )
+        ) : history.length === 0 ? (
+          <p className="text-neutral-400 text-sm">No watch history yet.</p>
         ) : (
-          history.length === 0 ? (
-            <p className="text-neutral-400 text-sm">No watch history yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-              {history.map((item) => {
-                const linkHref = item.media_type === 'movie'
-                  ? `/watch/${item.media_id}`
-                  : `/tv/${item.media_id}?season=${item.season || 1}&episode=${item.episode || 1}`;
-
-                return (
-                  <Link key={item.id} href={linkHref}>
-                    <div className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-700 transition hover:-translate-y-1">
-                      <div className="aspect-[2/3] w-full bg-neutral-800 relative">
-                        {item.poster_path && (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition"
-                          />
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-semibold text-sm truncate text-neutral-100 group-hover:text-red-400">
-                          {item.title}
-                        </h3>
-                        {item.media_type === 'tv' && (
-                          <p className="text-xs text-red-500 font-medium mt-1">
-                            S{item.season} E{item.episode}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+          <>
+            <div className={grid}>
+              {history.map((item) => (
+                <PosterCard
+                  key={`${item.media_type}-${item.media_id}`}
+                  className="w-full"
+                  href={
+                    item.media_type === 'movie'
+                      ? `/watch/${item.media_id}`
+                      : `/tv/${item.media_id}?season=${item.season || 1}&episode=${item.episode || 1}`
+                  }
+                  title={item.title}
+                  posterPath={item.poster_path}
+                  subtitle={
+                    item.media_type === 'tv' ? `S${item.season || 1} · E${item.episode || 1}` : undefined
+                  }
+                />
+              ))}
             </div>
-          )
+            <div className="mt-8 text-center">
+              <Link href="/history" className="text-xs font-semibold text-sky-400 hover:text-sky-300">
+                Open full history page →
+              </Link>
+            </div>
+          </>
         )}
       </section>
     </main>

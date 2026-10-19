@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { getSupabase } from '@/lib/supabase/client';
 
 interface WatchlistButtonProps {
   mediaId: string;
@@ -24,30 +24,31 @@ export default function WatchlistButton({
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
-
   useEffect(() => {
     async function checkWatchlist() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const supabase = getSupabase();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        setUserId(user.id);
+
+        const { data } = await supabase
+          .from('watchlist')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('media_id', mediaId)
+          .eq('media_type', mediaType)
+          .limit(1)
+          .maybeSingle();
+
+        if (data) setInWatchlist(true);
+      } catch (err) {
+        console.error('Could not check watchlist:', err);
+      } finally {
         setLoading(false);
-        return;
       }
-      setUserId(user.id);
-
-      const { data } = await supabase
-        .from('watchlist')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('media_id', mediaId)
-        .eq('media_type', mediaType)
-        .single();
-
-      if (data) setInWatchlist(true);
-      setLoading(false);
     }
 
     checkWatchlist();
@@ -55,46 +56,52 @@ export default function WatchlistButton({
 
   const toggleWatchlist = async () => {
     if (!userId) {
-      alert('Please sign in with Google to add titles to your Watchlist!');
+      alert('Please sign in to add titles to My List.');
       return;
     }
 
     setLoading(true);
+    try {
+      const supabase = getSupabase();
 
-    if (inWatchlist) {
-      await supabase
-        .from('watchlist')
-        .delete()
-        .eq('user_id', userId)
-        .eq('media_id', mediaId)
-        .eq('media_type', mediaType);
-
-      setInWatchlist(false);
-    } else {
-      await supabase.from('watchlist').insert({
-        user_id: userId,
-        media_id: mediaId,
-        media_type: mediaType,
-        title,
-        poster_path: posterPath,
-        vote_average: voteAverage,
-        release_date: releaseDate,
-      });
-
-      setInWatchlist(true);
+      if (inWatchlist) {
+        const { error } = await supabase
+          .from('watchlist')
+          .delete()
+          .eq('user_id', userId)
+          .eq('media_id', mediaId)
+          .eq('media_type', mediaType);
+        if (error) throw error;
+        setInWatchlist(false);
+      } else {
+        const { error } = await supabase.from('watchlist').insert({
+          user_id: userId,
+          media_id: mediaId,
+          media_type: mediaType,
+          title,
+          poster_path: posterPath || null,
+          vote_average: voteAverage || null,
+          release_date: releaseDate || null,
+        });
+        if (error) throw error;
+        setInWatchlist(true);
+      }
+    } catch (err) {
+      console.error('Could not update watchlist:', err);
+      alert('Something went wrong saving that. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <button
       onClick={toggleWatchlist}
       disabled={loading}
-      className={`px-4 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-2 cursor-pointer ${
+      className={`px-4 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-60 ${
         inWatchlist
-          ? 'bg-neutral-800 text-green-400 border border-green-500/30 hover:bg-neutral-700'
-          : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20'
+          ? 'bg-neutral-900 text-sky-300 border border-sky-400/40 hover:bg-neutral-800'
+          : 'bg-sky-500 hover:bg-sky-400 text-black shadow-lg shadow-sky-500/20'
       }`}
     >
       {inWatchlist ? '✓ Saved in My List' : '+ Add to My List'}

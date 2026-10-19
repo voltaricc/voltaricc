@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/movies', label: 'Movies' },
   { href: '/tv', label: 'TV Shows' },
   { href: '/library', label: 'My Library' },
+  { href: '/history', label: 'History' },
 ];
 
 export default function Header() {

@@ -1,3 +1,4 @@
+import WatchlistRow from '@/components/WatchlistRow';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/Header';
@@ -72,6 +73,7 @@ export default async function HomePage() {
 
       <div className="space-y-10 px-4 md:px-10">
         <ContinueWatching />
+        <WatchlistRow />
         <MediaRow title="Trending Now" items={trendingNow} type="movie" />
         <MediaRow title="Popular Movies" items={movies} type="movie" />
         <MediaRow title="Popular TV Shows" items={tvShows} type="tv" />

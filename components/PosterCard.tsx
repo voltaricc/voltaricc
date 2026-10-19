@@ -6,6 +6,7 @@ type Props = {
   title: string;
   posterPath: string | null;
   rating?: number;
+  subtitle?: string;
   className?: string;
 };
 
@@ -14,6 +15,7 @@ export default function PosterCard({
   title,
   posterPath,
   rating,
+  subtitle,
   className = 'shrink-0 w-36 md:w-44',
 }: Props) {
   return (
@@ -45,6 +47,9 @@ export default function PosterCard({
         </div>
         <div className="p-2.5">
           <h3 className="font-semibold text-xs truncate text-neutral-100">{title}</h3>
+          {subtitle ? (
+            <p className="mt-0.5 text-[10px] font-semibold text-sky-400">{subtitle}</p>
+          ) : null}
         </div>
       </div>
     </Link>
