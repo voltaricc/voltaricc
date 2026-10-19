@@ -3,7 +3,7 @@ import type { Media } from '@/lib/tmdb';
 
 type Props = {
   title: string;
-  items: Media[];
+  items: (Media & { media_type?: string })[];
   type: 'movie' | 'tv';
 };
 
@@ -22,14 +22,19 @@ export default function MediaRow({ title, items, type }: Props) {
     <section>
       <RowHeading>{title}</RowHeading>
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none">
-        {items.map((item) => (
-          <PosterCard
-            key={item.id}
-            href={type === 'tv' ? `/tv/${item.id}` : `/watch/${item.id}`}
-            title={item.title || item.name || 'Untitled'}
-            posterPath={item.poster_path}
-          />
-        ))}
+        {items.map((item) => {
+          // Mixed rows (like Trending Now) tell us each item's type themselves.
+          const kind = item.media_type === 'tv' || item.media_type === 'movie' ? item.media_type : type;
+          return (
+            <PosterCard
+              key={`${kind}-${item.id}`}
+              href={kind === 'tv' ? `/tv/${item.id}` : `/watch/${item.id}`}
+              title={item.title || item.name || 'Untitled'}
+              posterPath={item.poster_path}
+              rating={item.vote_average}
+            />
+          );
+        })}
       </div>
     </section>
   );
