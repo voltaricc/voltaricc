@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
+import { ContinueWatchingItem } from '@/components/ContinueWatching';
 
 export default function TVWatchPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -13,15 +14,16 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
   const [season, setSeason] = useState<number>(1);
   const [episode, setEpisode] = useState<number>(1);
 
+  // 1. Fetch TV Series IMDb ID
   useEffect(() => {
-    // If the ID already starts with 'tt', it's already an IMDb ID
+    if (!id) return;
+
     if (id.startsWith('tt')) {
       setImdbId(id);
       setLoading(false);
       return;
     }
 
-    // Fetch external IDs from TMDb API to obtain the series IMDb ID
     async function fetchExternalId() {
       try {
         const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
@@ -29,12 +31,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
           `https://api.themoviedb.org/3/tv/${id}/external_ids?api_key=${apiKey}`
         );
         const data = await res.json();
-
-        if (data.imdb_id) {
-          setImdbId(data.imdb_id);
-        } else {
-          setImdbId(id); // Fallback to original TMDb ID
-        }
+        setImdbId(data.imdb_id || id);
       } catch (err) {
         console.error('Failed to fetch TV IMDb ID:', err);
         setImdbId(id);
@@ -46,6 +43,42 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
     fetchExternalId();
   }, [id]);
 
+  // 2. Save/Update item in watch_history localStorage
+  useEffect(() => {
+    if (!id) return;
+
+    try {
+      const saved = localStorage.getItem('watch_history');
+      let history: ContinueWatchingItem[] = saved ? JSON.parse(saved) : [];
+
+      const existingIndex = history.findIndex((item) => item.id === id);
+
+      const newItem: ContinueWatchingItem = {
+        id,
+        title: `TV Show (${id})`,
+        posterPath: '',
+        type: 'tv',
+        season,
+        episode,
+        progress: 10,
+      };
+
+      if (existingIndex > -1) {
+        history[existingIndex] = {
+          ...history[existingIndex],
+          season,
+          episode,
+        };
+      } else {
+        history.unshift(newItem);
+      }
+
+      localStorage.setItem('watch_history', JSON.stringify(history));
+    } catch (e) {
+      console.error('Failed to update watch history:', e);
+    }
+  }, [id, season, episode]);
+
   const embedUrl = imdbId
     ? `https://framextv.tech/embed/${imdbId}?season=${season}&episode=${episode}`
     : '';
@@ -55,7 +88,6 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
       <Header />
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
-        
         {/* Controls Bar: Season & Episode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-900/80 border border-neutral-800 p-4 rounded-xl">
           <div>
@@ -74,7 +106,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
                 value={season}
                 onChange={(e) => {
                   setSeason(Number(e.target.value));
-                  setEpisode(1); // Reset to Episode 1 when changing season
+                  setEpisode(1);
                 }}
                 className="bg-neutral-800 text-neutral-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-700 focus:outline-none focus:border-sky-500"
               >
@@ -134,7 +166,6 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
             ← Back to Home
           </Link>
         </div>
-
       </div>
     </main>
   );
