@@ -7,7 +7,7 @@ import { getSupabase } from '@/lib/supabase/client';
 export interface ContinueWatchingItem {
   id: string;
   title: string;
-  posterPath: string;
+  posterPath: string; // Will now store episode stills or backdrops
   type: 'movie' | 'tv';
   season?: number;
   episode?: number;
@@ -20,53 +20,14 @@ export default function ContinueWatching() {
 
   useEffect(() => {
     setIsMounted(true);
-
-    async function loadWatchHistory() {
-      try {
-        const supabase = getSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          // Fetch watch history from Supabase
-          const { data, error } = await supabase
-            .from('watch_history')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('watched_at', { ascending: false });
-
-          if (!error && data && data.length > 0) {
-            const formatted: ContinueWatchingItem[] = data.map((row) => ({
-              id: row.media_id,
-              title: row.title,
-              posterPath: row.poster_path,
-              type: row.media_type,
-              season: row.season,
-              episode: row.episode,
-              progress: 15, // Default progress display
-            }));
-
-            setItems(formatted);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Could not fetch Supabase watch history, reading localStorage:', err);
+    try {
+      const savedHistory = localStorage.getItem('watch_history');
+      if (savedHistory) {
+        setItems(JSON.parse(savedHistory));
       }
-
-      // Fallback: Read local storage
-      try {
-        const savedHistory = localStorage.getItem('watch_history');
-        if (savedHistory) {
-          setItems(JSON.parse(savedHistory));
-        }
-      } catch (e) {
-        console.error('Failed to parse watch history from localStorage:', e);
-      }
+    } catch (e) {
+      console.error('Failed to parse watch history:', e);
     }
-
-    loadWatchHistory();
   }, []);
 
   if (!isMounted || items.length === 0) return null;
@@ -77,31 +38,28 @@ export default function ContinueWatching() {
 
       <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1">
         {items.map((item) => {
-          const percent = item.progress ?? 10;
+          const percent = item.progress ?? 15;
 
           const watchUrl =
             item.type === 'tv'
               ? `/tv/${item.id}?season=${item.season || 1}&episode=${item.episode || 1}`
               : `/watch/${item.id}`;
 
-          const posterUrl = item.posterPath
+          const imageUrl = item.posterPath
             ? `https://image.tmdb.org/t/p/w500${item.posterPath}`
             : null;
 
           return (
             <div
-              key={`${item.type}-${item.id}`}
-              className="flex-none w-40 md:w-48 group relative rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 transition transform hover:-translate-y-1 hover:border-neutral-700"
+              key={`${item.type}-${item.id}-${item.season || 0}-${item.episode || 0}`}
+              className="flex-none w-64 md:w-72 group relative rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 transition transform hover:-translate-y-1 hover:border-neutral-700 shadow-xl"
             >
-              <Link href={watchUrl} className="block relative aspect-[2/3] w-full">
-                {posterUrl ? (
+              <Link href={watchUrl} className="block relative aspect-video w-full">
+                {imageUrl ? (
                   <img
-                    src={posterUrl}
+                    src={imageUrl}
                     alt={item.title}
                     className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-neutral-800 flex items-center justify-center p-2 text-center text-xs text-neutral-400">
@@ -109,13 +67,13 @@ export default function ContinueWatching() {
                   </div>
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-90 group-hover:opacity-100 transition" />
 
                 <div className="absolute bottom-3 left-3 right-3 text-white">
                   <p className="text-xs font-bold truncate">{item.title}</p>
                   {item.type === 'tv' && item.season && item.episode && (
-                    <p className="text-[10px] text-neutral-400">
-                      S{item.season} E{item.episode}
+                    <p className="text-[10px] text-sky-400 font-medium">
+                      Season {item.season} : Episode {item.episode}
                     </p>
                   )}
                 </div>

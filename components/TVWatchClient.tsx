@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
 import WatchTracker from '@/components/WatchTracker';
@@ -16,6 +16,7 @@ interface TVWatchClientProps {
   imdbId: string;
   tvName: string;
   posterPath: string;
+  backdropPath: string;
   seasons: Season[];
   initialSeason: number;
   initialEpisode: number;
@@ -26,12 +27,34 @@ export default function TVWatchClient({
   imdbId,
   tvName,
   posterPath,
+  backdropPath,
   seasons,
   initialSeason,
   initialEpisode,
 }: TVWatchClientProps) {
   const [season, setSeason] = useState<number>(initialSeason);
   const [episode, setEpisode] = useState<number>(initialEpisode);
+  const [episodeStill, setEpisodeStill] = useState<string>(backdropPath || posterPath);
+
+  // Fetch specific episode still image when season or episode changes
+  useEffect(() => {
+    if (!id) return;
+    async function fetchEpisodeStill() {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+        const res = await fetch(`https://api.themoviedb.org/3/tv/${id}/season/${season}/episode/${episode}?api_key=${apiKey}`);
+        const data = await res.json();
+        if (data && data.still_path) {
+          setEpisodeStill(data.still_path);
+        } else {
+          setEpisodeStill(backdropPath || posterPath);
+        }
+      } catch (err) {
+        setEpisodeStill(backdropPath || posterPath);
+      }
+    }
+    fetchEpisodeStill();
+  }, [id, season, episode, backdropPath, posterPath]);
 
   const currentSeasonObj = seasons.find((s) => s.season_number === season) || seasons[0] || { episode_count: 1 };
   const maxEpisodes = currentSeasonObj.episode_count || 1;
@@ -48,7 +71,6 @@ export default function TVWatchClient({
     window.history.replaceState(null, '', `?season=${season}&episode=${newEpisode}`);
   };
 
-  // Use the numeric TMDb ID with the standard TV embed path format which scrapers expect
   const embedUrl = `https://framextv.tech/embed/tv/${id}/${season}/${episode}`;
 
   return (
@@ -60,15 +82,13 @@ export default function TVWatchClient({
           mediaId={id}
           mediaType="tv"
           title={tvName}
-          posterPath={posterPath}
+          posterPath={episodeStill} // Saves the specific episode thumbnail
           season={season}
           episode={episode}
         />
       )}
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
-        
-        {/* Controls Bar: Season & Episode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-900/80 border border-neutral-800 p-4 rounded-xl">
           <div>
             <h1 className="text-sm font-semibold text-neutral-300">
@@ -78,11 +98,8 @@ export default function TVWatchClient({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Season Dropdown */}
             <div className="flex items-center gap-2">
-              <label htmlFor="season-select" className="text-xs text-neutral-400 font-medium">
-                Season:
-              </label>
+              <label htmlFor="season-select" className="text-xs text-neutral-400 font-medium">Season:</label>
               <select
                 id="season-select"
                 value={season}
@@ -97,11 +114,8 @@ export default function TVWatchClient({
               </select>
             </div>
 
-            {/* Episode Dropdown */}
             <div className="flex items-center gap-2">
-              <label htmlFor="episode-select" className="text-xs text-neutral-400 font-medium">
-                Episode:
-              </label>
+              <label htmlFor="episode-select" className="text-xs text-neutral-400 font-medium">Episode:</label>
               <select
                 id="episode-select"
                 value={episode}
@@ -118,7 +132,6 @@ export default function TVWatchClient({
           </div>
         </div>
 
-        {/* Player Container */}
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 shadow-2xl">
           <iframe
             key={`${id}-${season}-${episode}`}
@@ -130,16 +143,11 @@ export default function TVWatchClient({
           />
         </div>
 
-        {/* Back Link */}
         <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-sky-400 transition"
-          >
+          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-sky-400 transition">
             ← Back to Home
           </Link>
         </div>
-
       </div>
     </main>
   );

@@ -30,7 +30,8 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
         if (movieJson && !movieJson.status_message) {
           setMovieData({
             title: movieJson.title || movieJson.original_title || '',
-            poster_path: movieJson.poster_path || '',
+            // Use backdrop_path for landscape horizontal thumbnail, fallback to poster
+            poster_path: movieJson.backdrop_path || movieJson.poster_path || '',
           });
         }
 
@@ -88,10 +89,7 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
         </div>
 
         <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-sky-400 transition"
-          >
+          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-sky-400 transition">
             ← Back to Home
           </Link>
         </div>
