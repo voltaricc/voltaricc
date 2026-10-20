@@ -14,7 +14,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
   const [season, setSeason] = useState<number>(1);
   const [episode, setEpisode] = useState<number>(1);
 
-  // 1. Fetch TV Series IMDb ID
+  // 1. Fetch TV Series IMDb ID from TMDb API
   useEffect(() => {
     if (!id) return;
 
@@ -55,7 +55,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
 
       const newItem: ContinueWatchingItem = {
         id,
-        title: `TV Show (${id})`,
+        title: `TV Series (${id})`,
         posterPath: '',
         type: 'tv',
         season,
@@ -79,15 +79,18 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
     }
   }, [id, season, episode]);
 
+  // FrameX TV embed URL for TV shows
+  // Supports both path-based (/embed/tv/id/s/e) and TMDb query parameters
   const embedUrl = imdbId
-    ? `https://framextv.tech/embed/${imdbId}?season=${season}&episode=${episode}`
-    : '';
+    ? `https://framextv.tech/embed/tv/${imdbId}/${season}/${episode}`
+    : `https://framextv.tech/embed/tv/${id}?s=${season}&e=${episode}`;
 
   return (
     <main className="min-h-screen bg-black text-white font-sans pb-16">
       <Header />
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
+        
         {/* Controls Bar: Season & Episode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-900/80 border border-neutral-800 p-4 rounded-xl">
           <div>
@@ -147,7 +150,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
             </div>
           ) : (
             <iframe
-              key={`${imdbId}-${season}-${episode}`}
+              key={`${imdbId || id}-${season}-${episode}`}
               src={embedUrl}
               className="w-full h-full border-0"
               allowFullScreen
@@ -166,6 +169,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
             ← Back to Home
           </Link>
         </div>
+
       </div>
     </main>
   );
