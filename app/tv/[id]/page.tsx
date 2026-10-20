@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
 
@@ -8,11 +8,47 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
   const resolvedParams = use(params);
   const { id } = resolvedParams;
 
+  const [imdbId, setImdbId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [season, setSeason] = useState<number>(1);
   const [episode, setEpisode] = useState<number>(1);
 
-  // FrameX TV embed URL formatted for TV series with season and episode query parameters
-  const embedUrl = `https://framextv.tech/embed/${id}?season=${season}&episode=${episode}`;
+  useEffect(() => {
+    // If the ID already starts with 'tt', it's already an IMDb ID
+    if (id.startsWith('tt')) {
+      setImdbId(id);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch external IDs from TMDb API to obtain the series IMDb ID
+    async function fetchExternalId() {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+        const res = await fetch(
+          `https://api.themoviedb.org/3/tv/${id}/external_ids?api_key=${apiKey}`
+        );
+        const data = await res.json();
+
+        if (data.imdb_id) {
+          setImdbId(data.imdb_id);
+        } else {
+          setImdbId(id); // Fallback to original TMDb ID
+        }
+      } catch (err) {
+        console.error('Failed to fetch TV IMDb ID:', err);
+        setImdbId(id);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchExternalId();
+  }, [id]);
+
+  const embedUrl = imdbId
+    ? `https://framextv.tech/embed/${imdbId}?season=${season}&episode=${episode}`
+    : '';
 
   return (
     <main className="min-h-screen bg-black text-white font-sans pb-16">
@@ -38,7 +74,7 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
                 value={season}
                 onChange={(e) => {
                   setSeason(Number(e.target.value));
-                  setEpisode(1); // Reset to Episode 1 when season changes
+                  setEpisode(1); // Reset to Episode 1 when changing season
                 }}
                 className="bg-neutral-800 text-neutral-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-700 focus:outline-none focus:border-sky-500"
               >
@@ -73,14 +109,20 @@ export default function TVWatchPage({ params }: { params: Promise<{ id: string }
 
         {/* Player Container */}
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 shadow-2xl">
-          <iframe
-            key={`${season}-${episode}`}
-            src={embedUrl}
-            className="w-full h-full border-0"
-            allowFullScreen
-            title="TV Video Player"
-            referrerPolicy="origin"
-          />
+          {loading ? (
+            <div className="flex items-center justify-center w-full h-full text-neutral-400 text-sm">
+              Loading player...
+            </div>
+          ) : (
+            <iframe
+              key={`${imdbId}-${season}-${episode}`}
+              src={embedUrl}
+              className="w-full h-full border-0"
+              allowFullScreen
+              title="TV Video Player"
+              referrerPolicy="origin"
+            />
+          )}
         </div>
 
         {/* Back Link */}
