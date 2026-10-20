@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getSupabase } from '@/lib/supabase/client';
 
 export interface ContinueWatchingItem {
   id: string;
@@ -10,8 +11,6 @@ export interface ContinueWatchingItem {
   type: 'movie' | 'tv';
   season?: number;
   episode?: number;
-  currentTime?: number;
-  duration?: number;
   progress?: number;
 }
 
@@ -21,18 +20,55 @@ export default function ContinueWatching() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Read saved watch history from localStorage
-    try {
-      const savedHistory = localStorage.getItem('watch_history');
-      if (savedHistory) {
-        setItems(JSON.parse(savedHistory));
+
+    async function loadWatchHistory() {
+      try {
+        const supabase = getSupabase();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          // Fetch watch history from Supabase
+          const { data, error } = await supabase
+            .from('watch_history')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('watched_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            const formatted: ContinueWatchingItem[] = data.map((row) => ({
+              id: row.media_id,
+              title: row.title,
+              posterPath: row.poster_path,
+              type: row.media_type,
+              season: row.season,
+              episode: row.episode,
+              progress: 15, // Default progress display
+            }));
+
+            setItems(formatted);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch Supabase watch history, reading localStorage:', err);
       }
-    } catch (e) {
-      console.error('Failed to parse watch history from localStorage:', e);
+
+      // Fallback: Read local storage
+      try {
+        const savedHistory = localStorage.getItem('watch_history');
+        if (savedHistory) {
+          setItems(JSON.parse(savedHistory));
+        }
+      } catch (e) {
+        console.error('Failed to parse watch history from localStorage:', e);
+      }
     }
+
+    loadWatchHistory();
   }, []);
 
-  // Prevent hydration mismatch by rendering nothing until mounted in browser
   if (!isMounted || items.length === 0) return null;
 
   return (
@@ -41,31 +77,37 @@ export default function ContinueWatching() {
 
       <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1">
         {items.map((item) => {
-          let percent = item.progress ?? 0;
-          if (!item.progress && item.currentTime && item.duration && item.duration > 0) {
-            percent = Math.min(100, Math.round((item.currentTime / item.duration) * 100));
-          }
+          const percent = item.progress ?? 10;
 
           const watchUrl =
             item.type === 'tv'
               ? `/tv/${item.id}?season=${item.season || 1}&episode=${item.episode || 1}`
               : `/watch/${item.id}`;
 
+          const posterUrl = item.posterPath
+            ? `https://image.tmdb.org/t/p/w500${item.posterPath}`
+            : null;
+
           return (
             <div
-              key={item.id}
+              key={`${item.type}-${item.id}`}
               className="flex-none w-40 md:w-48 group relative rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 transition transform hover:-translate-y-1 hover:border-neutral-700"
             >
               <Link href={watchUrl} className="block relative aspect-[2/3] w-full">
-                <img
-                  src={
-                    item.posterPath
-                      ? `https://image.tmdb.org/t/p/w500${item.posterPath}`
-                      : '/placeholder.jpg'
-                  }
-                  alt={item.title}
-                  className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                />
+                {posterUrl ? (
+                  <img
+                    src={posterUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-neutral-800 flex items-center justify-center p-2 text-center text-xs text-neutral-400">
+                    {item.title}
+                  </div>
+                )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition" />
 

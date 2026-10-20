@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
-import { ContinueWatchingItem } from '@/components/ContinueWatching';
+import WatchTracker from '@/components/WatchTracker';
 
 export default function WatchPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -11,67 +11,39 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
 
   const [imdbId, setImdbId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [movieData, setMovieData] = useState<{ title: string; poster_path: string } | null>(null);
 
-  // 1. Fetch Movie IMDb ID from TMDb API
   useEffect(() => {
     if (!id) return;
 
-    if (id.startsWith('tt')) {
-      setImdbId(id);
-      setLoading(false);
-      return;
-    }
-
-    async function fetchExternalId() {
+    async function fetchMovieDetails() {
       try {
         const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${id}/external_ids?api_key=${apiKey}`
-        );
-        const data = await res.json();
-        setImdbId(data.imdb_id || id);
+        const [movieRes, extRes] = await Promise.all([
+          fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}`),
+          fetch(`https://api.themoviedb.org/3/movie/${id}/external_ids?api_key=${apiKey}`)
+        ]);
+
+        const movieJson = await movieRes.json();
+        const extJson = await extRes.json();
+
+        if (movieJson && !movieJson.status_message) {
+          setMovieData({
+            title: movieJson.title || movieJson.original_title || '',
+            poster_path: movieJson.poster_path || '',
+          });
+        }
+
+        setImdbId(extJson.imdb_id || id);
       } catch (err) {
-        console.error('Failed to fetch Movie IMDb ID:', err);
+        console.error('Failed to fetch Movie details:', err);
         setImdbId(id);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchExternalId();
-  }, [id]);
-
-  // 2. Save/Update item in watch_history localStorage
-  useEffect(() => {
-    if (!id) return;
-
-    try {
-      const saved = localStorage.getItem('watch_history');
-      let history: ContinueWatchingItem[] = saved ? JSON.parse(saved) : [];
-
-      const existingIndex = history.findIndex((item) => item.id === id);
-
-      const newItem: ContinueWatchingItem = {
-        id,
-        title: `Movie (${id})`,
-        posterPath: '',
-        type: 'movie',
-        progress: 10, // Initial default progress
-      };
-
-      if (existingIndex > -1) {
-        // Move updated item to top of array
-        const existingItem = history[existingIndex];
-        history.splice(existingIndex, 1);
-        history.unshift(existingItem);
-      } else {
-        history.unshift(newItem);
-      }
-
-      localStorage.setItem('watch_history', JSON.stringify(history));
-    } catch (e) {
-      console.error('Failed to update watch history:', e);
-    }
+    fetchMovieDetails();
   }, [id]);
 
   const embedUrl = imdbId ? `https://framextv.tech/embed/${imdbId}` : '';
@@ -80,17 +52,25 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
     <main className="min-h-screen bg-black text-white font-sans pb-16">
       <Header />
 
+      {movieData && (
+        <WatchTracker
+          mediaId={id}
+          mediaType="movie"
+          title={movieData.title}
+          posterPath={movieData.poster_path}
+        />
+      )}
+
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
-        
-        {/* Info Header */}
         <div className="flex items-center justify-between bg-neutral-900/80 border border-neutral-800 p-4 rounded-xl">
           <div>
-            <h1 className="text-sm font-semibold text-neutral-300">Streaming via FrameX TV Engine</h1>
+            <h1 className="text-sm font-semibold text-neutral-300">
+              {movieData?.title ? `Watching ${movieData.title}` : 'Streaming via FrameX TV Engine'}
+            </h1>
             <p className="text-xs text-neutral-500">High-bitrate HTML5 responsive player stream.</p>
           </div>
         </div>
 
-        {/* Player Container */}
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-800 shadow-2xl">
           {loading ? (
             <div className="flex items-center justify-center w-full h-full text-neutral-400 text-sm">
@@ -107,7 +87,6 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
           )}
         </div>
 
-        {/* Back Link */}
         <div>
           <Link
             href="/"
@@ -116,7 +95,6 @@ export default function WatchPage({ params }: { params: Promise<{ id: string }> 
             ← Back to Home
           </Link>
         </div>
-
       </div>
     </main>
   );

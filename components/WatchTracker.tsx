@@ -10,6 +10,7 @@ interface WatchTrackerProps {
   posterPath: string;
   season?: number;
   episode?: number;
+  progress?: number;
 }
 
 export default function WatchTracker({
@@ -19,53 +20,34 @@ export default function WatchTracker({
   posterPath,
   season,
   episode,
+  progress = 10,
 }: WatchTrackerProps) {
   useEffect(() => {
-    let cancelled = false;
+    if (!mediaId || !title) return;
 
-    async function recordHistory() {
-      try {
-        const supabase = getSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
+    try {
+      const saved = localStorage.getItem('watch_history');
+      let history = saved ? JSON.parse(saved) : [];
 
-        const fields = {
-          title,
-          poster_path: posterPath || null,
-          season: season ?? null,
-          episode: episode ?? null,
-          watched_at: new Date().toISOString(),
-        };
+      history = history.filter((item: any) => item.id !== mediaId);
 
-        // Is this title already in the history? If so, update it. If not, add it.
-        const { data: existing, error: findError } = await supabase
-          .from('watch_history')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('media_id', mediaId)
-          .eq('media_type', mediaType)
-          .limit(1)
-          .maybeSingle();
-        if (findError) throw findError;
+      const newItem = {
+        id: mediaId,
+        title,
+        posterPath,
+        type: mediaType,
+        season,
+        episode,
+        progress, // Saves the current progress percentage
+        updatedAt: new Date().toISOString(),
+      };
 
-        const { error } = existing
-          ? await supabase.from('watch_history').update(fields).eq('id', existing.id)
-          : await supabase
-              .from('watch_history')
-              .insert({ user_id: user.id, media_id: mediaId, media_type: mediaType, ...fields });
-        if (error) throw error;
-      } catch (err) {
-        console.error('Could not save watch history:', err);
-      }
+      history.unshift(newItem);
+      localStorage.setItem('watch_history', JSON.stringify(history));
+    } catch (err) {
+      console.error('Error saving progress:', err);
     }
-
-    recordHistory();
-    return () => {
-      cancelled = true;
-    };
-  }, [mediaId, mediaType, title, posterPath, season, episode]);
+  }, [mediaId, mediaType, title, posterPath, season, episode, progress]);
 
   return null;
 }
