@@ -15,6 +15,10 @@ export default async function TVWatchPage({
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
 
   let tvName = '';
+  let overview = '';
+  let voteAverage = 0;
+  let firstAirDate = '';
+  let cast: any[] = [];
   let posterPath = '';
   let backdropPath = '';
   let imdbId = id;
@@ -39,14 +43,19 @@ export default async function TVWatchPage({
       if (extData.imdb_id) imdbId = extData.imdb_id;
     }
 
-    const tvRes = await fetch(
-      `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}`,
-      { next: { revalidate: 3600 } }
-    );
+    const [tvRes, creditsRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}`, { next: { revalidate: 3600 } }),
+      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/credits?api_key=${apiKey}`, { next: { revalidate: 3600 } })
+    ]);
+
     const tvData = await tvRes.json();
+    const creditsData = await creditsRes.json();
 
     if (tvData && !tvData.status_message) {
       tvName = tvData.name || tvData.original_name || '';
+      overview = tvData.overview || '';
+      voteAverage = tvData.vote_average || 0;
+      firstAirDate = tvData.first_air_date || '';
       posterPath = tvData.poster_path || '';
       backdropPath = tvData.backdrop_path || '';
 
@@ -57,6 +66,10 @@ export default async function TVWatchPage({
         seasons = validSeasons;
       }
     }
+
+    if (creditsData && creditsData.cast) {
+      cast = creditsData.cast.slice(0, 6);
+    }
   } catch (err) {
     console.error('Server-side TMDb fetch error:', err);
   }
@@ -66,6 +79,10 @@ export default async function TVWatchPage({
       id={id}
       imdbId={imdbId}
       tvName={tvName}
+      overview={overview}
+      voteAverage={voteAverage}
+      firstAirDate={firstAirDate}
+      cast={cast}
       posterPath={posterPath}
       backdropPath={backdropPath}
       seasons={seasons}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
 import WatchTracker from '@/components/WatchTracker';
+import WatchlistButton from '@/components/WatchlistButton';
 
 interface Season {
   season_number: number;
@@ -11,10 +12,20 @@ interface Season {
   name: string;
 }
 
+interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+}
+
 interface TVWatchClientProps {
   id: string;
   imdbId: string;
   tvName: string;
+  overview: string;
+  voteAverage: number;
+  firstAirDate: string;
+  cast: CastMember[];
   posterPath: string;
   backdropPath: string;
   seasons: Season[];
@@ -26,6 +37,10 @@ export default function TVWatchClient({
   id,
   imdbId,
   tvName,
+  overview,
+  voteAverage,
+  firstAirDate,
+  cast,
   posterPath,
   backdropPath,
   seasons,
@@ -36,7 +51,6 @@ export default function TVWatchClient({
   const [episode, setEpisode] = useState<number>(initialEpisode);
   const [episodeStill, setEpisodeStill] = useState<string>(backdropPath || posterPath);
 
-  // Fetch specific episode still image when season or episode changes
   useEffect(() => {
     if (!id) return;
     async function fetchEpisodeStill() {
@@ -82,13 +96,14 @@ export default function TVWatchClient({
           mediaId={id}
           mediaType="tv"
           title={tvName}
-          posterPath={episodeStill} // Saves the specific episode thumbnail
+          posterPath={episodeStill}
           season={season}
           episode={episode}
         />
       )}
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
+        {/* Middle Control Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-900/80 border border-neutral-800 p-4 rounded-xl">
           <div>
             <h1 className="text-sm font-semibold text-neutral-300">
@@ -97,7 +112,16 @@ export default function TVWatchClient({
             <p className="text-xs text-neutral-500">Select your season and episode below.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <WatchlistButton
+              mediaId={id}
+              mediaType="tv"
+              title={tvName}
+              posterPath={posterPath}
+              voteAverage={voteAverage}
+              releaseDate={firstAirDate}
+            />
+
             <div className="flex items-center gap-2">
               <label htmlFor="season-select" className="text-xs text-neutral-400 font-medium">Season:</label>
               <select
@@ -141,6 +165,43 @@ export default function TVWatchClient({
             title="TV Video Player"
             referrerPolicy="origin"
           />
+        </div>
+
+        <div className="bg-neutral-900/60 border border-neutral-800 p-6 rounded-2xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-white">{tvName}</h2>
+            <div className="flex items-center gap-3 text-xs font-semibold text-neutral-400">
+              {firstAirDate && <span>{firstAirDate.split('-')[0]}</span>}
+              <span>Season {season}</span>
+              {voteAverage > 0 && (
+                <span className="flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                  ★ {voteAverage.toFixed(1)} / 10
+                </span>
+              )}
+            </div>
+          </div>
+
+          {overview && (
+            <p className="text-sm text-neutral-300 leading-relaxed max-w-4xl">
+              {overview}
+            </p>
+          )}
+
+          {cast.length > 0 && (
+            <div className="pt-2 border-t border-neutral-800/80">
+              <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Main Cast</h3>
+              <div className="flex flex-wrap gap-2">
+                {cast.map((actor) => (
+                  <span
+                    key={actor.id}
+                    className="bg-neutral-800 text-neutral-200 text-xs px-3 py-1.5 rounded-lg border border-neutral-700/60"
+                  >
+                    {actor.name} <span className="text-neutral-400 font-normal">({actor.character})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
