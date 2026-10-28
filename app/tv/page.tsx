@@ -1,92 +1,56 @@
 import Header from '@/components/Header';
-import TVPlayerClient from '@/components/TVPlayerClient';
-import WatchTracker from '@/components/WatchTracker';
+import Link from 'next/link';
 
-export default async function TVShowPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ season?: string; episode?: string }>;
-}) {
-  const { id } = await params;
-  const resolvedSearch = await searchParams;
-  const currentSeason = resolvedSearch.season || '1';
-  const currentEpisode = resolvedSearch.episode || '1';
-
+export default async function TVShowsPage() {
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
-
-  let showData: any = null;
-  let seasonData: any = null;
+  let shows: any[] = [];
 
   if (apiKey) {
     try {
-      const showRes = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}`, {
+      const res = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=${apiKey}`, {
         next: { revalidate: 3600 },
       });
-      showData = await showRes.json();
-
-      const seasonRes = await fetch(
-        `https://api.themoviedb.org/3/tv/${id}/season/${currentSeason}?api_key=${apiKey}`,
-        { next: { revalidate: 3600 } }
-      );
-      seasonData = await seasonRes.json();
+      const data = await res.json();
+      shows = data.results || [];
     } catch (e) {
-      console.error('Failed to fetch TV show data:', e);
+      console.error('Failed to fetch TV shows:', e);
     }
   }
 
-  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=DC2626`;
-
   return (
-    <main className="min-h-screen bg-black text-white pb-20">
+    <main className="min-h-screen bg-black text-white pb-40">
       <Header />
-      <WatchTracker 
-        id={id} 
-        mediaType="tv" 
-        title={showData?.name || 'TV Show'} 
-        posterPath={showData?.poster_path} 
-      />
-      
-      {showData?.backdrop_path && (
-        <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden border-b border-neutral-900">
-          <img
-            src={`https://image.tmdb.org/t/p/original${showData.backdrop_path}`}
-            alt=""
-            className="w-full h-full object-cover opacity-40 blur-sm scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-          <div className="absolute bottom-6 max-w-7xl mx-auto px-4 md:px-10 w-full">
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
-              {showData.name}
-            </h1>
-            <p className="text-xs md:text-sm text-neutral-300 mt-2 line-clamp-2 max-w-2xl drop-shadow">
-              {showData.overview}
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Popular TV Shows</h1>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {shows.map((show) => (
+            <Link
+              key={show.id}
+              href={`/tv/${show.id}?season=1&episode=1`}
+              className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg flex flex-col"
+            >
+              <div className="aspect-[2/3] w-full bg-neutral-950 relative overflow-hidden">
+                {show.poster_path ? (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w500${show.poster_path}`}
+                    alt={show.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
+                    {show.name}
+                  </div>
+                )}
+              </div>
+              <div className="p-3">
+                <p className="text-xs font-semibold text-white line-clamp-1">{show.name}</p>
+                <p className="text-[10px] text-neutral-400 mt-0.5">
+                  {show.first_air_date?.split('-')[0]} • ★ {show.vote_average?.toFixed(1)}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
-        <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full border-0"
-            allowFullScreen
-            allow="encrypted-media; autoplay *; fullscreen *"
-            title={showData?.name || 'TV Show Player'}
-          />
-        </div>
-
-        {showData && (
-          <TVPlayerClient
-            showId={id}
-            seasons={showData.seasons || []}
-            currentSeason={currentSeason}
-            currentEpisode={currentEpisode}
-            episodes={seasonData?.episodes || []}
-          />
-        )}
       </div>
     </main>
   );

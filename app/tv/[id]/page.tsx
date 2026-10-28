@@ -1,5 +1,6 @@
 import Header from '@/components/Header';
 import TVPlayerClient from '@/components/TVPlayerClient';
+import WatchTracker from '@/components/WatchTracker';
 
 export default async function TVShowPage({
   params,
@@ -40,6 +41,12 @@ export default async function TVShowPage({
   return (
     <main className="min-h-screen bg-black text-white pb-20">
       <Header />
+      <WatchTracker 
+        id={id} 
+        mediaType="tv" 
+        title={showData?.name || 'TV Show'} 
+        posterPath={showData?.poster_path} 
+      />
       
       {showData?.backdrop_path && (
         <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden border-b border-neutral-900">

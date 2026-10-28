@@ -39,6 +39,9 @@ export default function WatchTracker({
             const existingHistory = JSON.parse(localStorage.getItem('voltarix_history') || '{}');
             existingHistory[id] = historyItem;
             localStorage.setItem('voltarix_history', JSON.stringify(existingHistory));
+
+            // Dispatch event for real-time component sync
+            window.dispatchEvent(new Event('voltarix_history_updated'));
           }
         }
       } catch (e) {
