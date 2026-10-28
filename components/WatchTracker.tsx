@@ -1,53 +1,54 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getSupabase } from '@/lib/supabase/client';
-
-interface WatchTrackerProps {
-  mediaId: string;
-  mediaType: 'movie' | 'tv';
-  title: string;
-  posterPath: string;
-  season?: number;
-  episode?: number;
-  progress?: number;
-}
 
 export default function WatchTracker({
-  mediaId,
+  id,
   mediaType,
   title,
   posterPath,
-  season,
-  episode,
-  progress = 10,
-}: WatchTrackerProps) {
+}: {
+  id: string;
+  mediaType: 'movie' | 'tv';
+  title: string;
+  posterPath?: string;
+}) {
   useEffect(() => {
-    if (!mediaId || !title) return;
+    function handlePlayerMessage(event: MessageEvent) {
+      if (typeof event.data !== 'string') return;
+      try {
+        const payload = JSON.parse(event.data);
+        
+        if (payload.event === 'timeupdate' && payload.currentTime) {
+          const currentTime = Math.floor(payload.currentTime);
+          const duration = Math.floor(payload.duration || 0);
+          const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-    try {
-      const saved = localStorage.getItem('watch_history');
-      let history = saved ? JSON.parse(saved) : [];
+          if (currentTime > 5 && progressPercent < 95) {
+            const historyItem = {
+              id,
+              mediaType,
+              title,
+              posterPath,
+              currentTime,
+              duration,
+              progressPercent: Math.round(progressPercent),
+              updatedAt: Date.now(),
+            };
 
-      history = history.filter((item: any) => item.id !== mediaId);
-
-      const newItem = {
-        id: mediaId,
-        title,
-        posterPath,
-        type: mediaType,
-        season,
-        episode,
-        progress, // Saves the current progress percentage
-        updatedAt: new Date().toISOString(),
-      };
-
-      history.unshift(newItem);
-      localStorage.setItem('watch_history', JSON.stringify(history));
-    } catch (err) {
-      console.error('Error saving progress:', err);
+            const existingHistory = JSON.parse(localStorage.getItem('voltarix_history') || '{}');
+            existingHistory[id] = historyItem;
+            localStorage.setItem('voltarix_history', JSON.stringify(existingHistory));
+          }
+        }
+      } catch (e) {
+        // Ignore non-json messages
+      }
     }
-  }, [mediaId, mediaType, title, posterPath, season, episode, progress]);
+
+    window.addEventListener('message', handlePlayerMessage);
+    return () => window.removeEventListener('message', handlePlayerMessage);
+  }, [id, mediaType, title, posterPath]);
 
   return null;
 }

@@ -1,6 +1,7 @@
-import TVWatchClient from '@/components/TVWatchClient';
+import Header from '@/components/Header';
+import TVPlayerClient from '@/components/TVPlayerClient';
 
-export default async function TVWatchPage({
+export default async function TVShowPage({
   params,
   searchParams,
 }: {
@@ -8,86 +9,78 @@ export default async function TVWatchPage({
   searchParams: Promise<{ season?: string; episode?: string }>;
 }) {
   const { id } = await params;
-  const query = await searchParams;
-  const initialSeason = Number(query.season) || 1;
-  const initialEpisode = Number(query.episode) || 1;
+  const resolvedSearch = await searchParams;
+  const currentSeason = resolvedSearch.season || '1';
+  const currentEpisode = resolvedSearch.episode || '1';
 
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
 
-  let tvName = '';
-  let overview = '';
-  let voteAverage = 0;
-  let firstAirDate = '';
-  let cast: any[] = [];
-  let posterPath = '';
-  let backdropPath = '';
-  let imdbId = id;
-  let seasons = [{ season_number: 1, episode_count: 1, name: 'Season 1' }];
+  let showData: any = null;
+  let seasonData: any = null;
 
-  try {
-    let tmdbId = id;
-    if (id.startsWith('tt')) {
-      const findRes = await fetch(
-        `https://api.themoviedb.org/3/find/${id}?api_key=${apiKey}&external_source=imdb_id`
+  if (apiKey) {
+    try {
+      const showRes = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}`, {
+        next: { revalidate: 3600 },
+      });
+      showData = await showRes.json();
+
+      const seasonRes = await fetch(
+        `https://api.themoviedb.org/3/tv/${id}/season/${currentSeason}?api_key=${apiKey}`,
+        { next: { revalidate: 3600 } }
       );
-      const findData = await findRes.json();
-      if (findData.tv_results && findData.tv_results.length > 0) {
-        tmdbId = findData.tv_results[0].id.toString();
-      }
-      imdbId = id;
-    } else {
-      const extRes = await fetch(
-        `https://api.themoviedb.org/3/tv/${id}/external_ids?api_key=${apiKey}`
-      );
-      const extData = await extRes.json();
-      if (extData.imdb_id) imdbId = extData.imdb_id;
+      seasonData = await seasonRes.json();
+    } catch (e) {
+      console.error('Failed to fetch TV show data:', e);
     }
-
-    const [tvRes, creditsRes] = await Promise.all([
-      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}`, { next: { revalidate: 3600 } }),
-      fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/credits?api_key=${apiKey}`, { next: { revalidate: 3600 } })
-    ]);
-
-    const tvData = await tvRes.json();
-    const creditsData = await creditsRes.json();
-
-    if (tvData && !tvData.status_message) {
-      tvName = tvData.name || tvData.original_name || '';
-      overview = tvData.overview || '';
-      voteAverage = tvData.vote_average || 0;
-      firstAirDate = tvData.first_air_date || '';
-      posterPath = tvData.poster_path || '';
-      backdropPath = tvData.backdrop_path || '';
-
-      const validSeasons = (tvData.seasons || []).filter(
-        (s: any) => s.season_number > 0
-      );
-      if (validSeasons.length > 0) {
-        seasons = validSeasons;
-      }
-    }
-
-    if (creditsData && creditsData.cast) {
-      cast = creditsData.cast.slice(0, 6);
-    }
-  } catch (err) {
-    console.error('Server-side TMDb fetch error:', err);
   }
 
+  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=DC2626`;
+
   return (
-    <TVWatchClient
-      id={id}
-      imdbId={imdbId}
-      tvName={tvName}
-      overview={overview}
-      voteAverage={voteAverage}
-      firstAirDate={firstAirDate}
-      cast={cast}
-      posterPath={posterPath}
-      backdropPath={backdropPath}
-      seasons={seasons}
-      initialSeason={initialSeason}
-      initialEpisode={initialEpisode}
-    />
+    <main className="min-h-screen bg-black text-white pb-20">
+      <Header />
+      
+      {showData?.backdrop_path && (
+        <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden border-b border-neutral-900">
+          <img
+            src={`https://image.tmdb.org/t/p/original${showData.backdrop_path}`}
+            alt=""
+            className="w-full h-full object-cover opacity-40 blur-sm scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          <div className="absolute bottom-6 max-w-7xl mx-auto px-4 md:px-10 w-full">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+              {showData.name}
+            </h1>
+            <p className="text-xs md:text-sm text-neutral-300 mt-2 line-clamp-2 max-w-2xl drop-shadow">
+              {showData.overview}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
+        <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
+          <iframe
+            src={embedUrl}
+            className="w-full h-full border-0"
+            allowFullScreen
+            allow="encrypted-media; autoplay *; fullscreen *"
+            title={showData?.name || 'TV Show Player'}
+          />
+        </div>
+
+        {showData && (
+          <TVPlayerClient
+            showId={id}
+            seasons={showData.seasons || []}
+            currentSeason={currentSeason}
+            currentEpisode={currentEpisode}
+            episodes={seasonData?.episodes || []}
+          />
+        )}
+      </div>
+    </main>
   );
 }

@@ -1,129 +1,145 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
-import PosterCard from '@/components/PosterCard';
-import { getSupabase } from '@/lib/supabase/client';
-
-type HistoryItem = {
-  id: string;
-  media_id: number;
-  media_type: 'movie' | 'tv';
-  title: string;
-  poster_path: string | null;
-  season: number | null;
-  episode: number | null;
-};
+import Link from 'next/link';
 
 export default function HistoryPage() {
-  const [items, setItems] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [signedIn, setSignedIn] = useState(true);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+
+  const loadHistory = () => {
+    const saved = localStorage.getItem('voltarix_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const sorted = Object.values(parsed).sort((a: any, b: any) => b.updatedAt - a.updatedAt);
+        setHistoryItems(sorted);
+      } catch (e) {
+        console.error('Failed to parse history:', e);
+      }
+    } else {
+      setHistoryItems([]);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const supabase = getSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setSignedIn(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('watch_history')
-          .select('id, media_id, media_type, title, poster_path, season, episode')
-          .eq('user_id', user.id)
-          .order('watched_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-
-        const seen = new Set<string>();
-        const unique = ((data ?? []) as HistoryItem[]).filter((row) => {
-          const key = `${row.media_type}-${row.media_id}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setItems(unique);
-      } catch (err) {
-        console.error('Could not load history:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
+    loadHistory();
   }, []);
 
-  async function clearHistory() {
-    if (!window.confirm('Clear your whole watch history?')) return;
-    try {
-      const supabase = getSupabase();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { error } = await supabase.from('watch_history').delete().eq('user_id', user.id);
-      if (error) throw error;
-      setItems([]);
-    } catch (err) {
-      console.error('Could not clear history:', err);
-      alert('Something went wrong. Please try again.');
+  const clearHistory = () => {
+    if (window.confirm('Are you sure you want to clear your watch history?')) {
+      localStorage.removeItem('voltarix_history');
+      setHistoryItems([]);
     }
-  }
+  };
+
+  const removeItem = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const saved = localStorage.getItem('voltarix_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        delete parsed[id];
+        localStorage.setItem('voltarix_history', JSON.stringify(parsed));
+        loadHistory();
+      } catch (err) {
+        console.error('Failed to remove history item:', err);
+      }
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-16">
+    <main className="min-h-screen bg-black text-white pb-40">
       <Header />
 
-      <section className="px-4 md:px-10 py-6">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-sky-400 rounded-full inline-block" />
-            Watch History
-          </h1>
-          {items.length > 0 && (
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
+        {/* Page Header & Clear Button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Watch History</h1>
+            <p className="text-xs md:text-sm text-neutral-400 mt-1">
+              Pick up right where you left off across all your devices.
+            </p>
+          </div>
+          {historyItems.length > 0 && (
             <button
               onClick={clearHistory}
-              className="rounded-lg border border-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-300 hover:border-sky-400 hover:text-white transition cursor-pointer"
+              className="bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 px-4 py-2 rounded-xl text-xs font-semibold transition"
             >
-              Clear history
+              Clear History
             </button>
           )}
         </div>
 
-        {loading ? (
-          <p className="text-neutral-400 text-sm">Loading your history...</p>
-        ) : !signedIn ? (
-          <p className="text-neutral-400 text-sm">Sign in to see what you have watched.</p>
-        ) : items.length === 0 ? (
-          <p className="text-neutral-400 text-sm">Nothing here yet. Start watching something!</p>
+        {/* History Grid */}
+        {historyItems.length === 0 ? (
+          <div className="w-full py-24 flex flex-col items-center justify-center text-center space-y-3 bg-neutral-950/50 rounded-2xl border border-neutral-900">
+            <p className="text-neutral-400 text-sm">Your watch history is empty.</p>
+            <Link
+              href="/"
+              className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-neutral-200 transition"
+            >
+              Explore Movies & TV Shows
+            </Link>
+          </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4">
-            {items.map((item) => (
-              <PosterCard
-                key={`${item.media_type}-${item.media_id}`}
-                className="w-full"
-                href={
-                  item.media_type === 'tv'
-                    ? `/tv/${item.media_id}?season=${item.season || 1}&episode=${item.episode || 1}`
-                    : `/watch/${item.media_id}`
-                }
-                title={item.title}
-                posterPath={item.poster_path}
-                subtitle={
-                  item.media_type === 'tv'
-                    ? `S${item.season || 1} · E${item.episode || 1}`
-                    : undefined
-                }
-              />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {historyItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.mediaType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}?season=1&episode=1`}
+                className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition shadow-lg flex flex-col"
+              >
+                {/* Poster Thumbnail */}
+                <div className="aspect-video w-full bg-neutral-950 relative overflow-hidden">
+                  {item.posterPath ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w500${item.posterPath}`}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
+                      {item.title}
+                    </div>
+                  )}
+
+                  {/* Remove Item Button */}
+                  <button
+                    onClick={(e) => removeItem(item.id, e)}
+                    className="absolute top-2 right-2 bg-black/70 hover:bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow-md"
+                    title="Remove from history"
+                  >
+                    ✕
+                  </button>
+
+                  {/* Progress Bar */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
+                    <div
+                      className="h-full bg-red-600 transition-all duration-300"
+                      style={{ width: `${item.progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Title & Metadata */}
+                <div className="p-3 flex flex-col justify-between flex-1">
+                  <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] text-neutral-400 capitalize">
+                      {item.mediaType} • {item.progressPercent}% watched
+                    </span>
+                    <span className="text-[10px] text-neutral-500">
+                      {new Date(item.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }
