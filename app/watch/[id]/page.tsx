@@ -1,5 +1,6 @@
 import Header from '@/components/Header';
 import WatchTracker from '@/components/WatchTracker';
+import WatchlistButton from '@/components/WatchlistButton';
 
 export default async function MovieWatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,10 +18,10 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
     }
   }
 
-  const embedUrl = `https://vidy.st/movie/${id}?color=DC2626`;
+  const embedUrl = `https://vidy.st/movie/${id}?color=38BDF8`;
 
   return (
-    <main className="min-h-screen bg-black text-white pb-16">
+    <main className="min-h-screen bg-black text-white pb-40">
       <Header />
       <WatchTracker 
         id={id} 
@@ -28,7 +29,7 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
         title={movieData?.title || 'Movie'} 
         posterPath={movieData?.poster_path} 
       />
-      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
         <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
           <iframe
             src={embedUrl}
@@ -40,12 +41,23 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
         </div>
 
         {movieData && (
-          <div className="space-y-2">
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{movieData.title}</h1>
-            <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
-              <span className="text-amber-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
-              <span>{movieData.release_date?.split('-')[0]}</span>
-              <span>{movieData.runtime} mins</span>
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{movieData.title}</h1>
+                <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400 mt-1">
+                  <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
+                  <span>{movieData.release_date?.split('-')[0]}</span>
+                  <span>{movieData.runtime} mins</span>
+                </div>
+              </div>
+              <WatchlistButton
+                mediaId={id}
+                mediaType="movie"
+                title={movieData.title}
+                posterPath={movieData.poster_path}
+                voteAverage={movieData.vote_average}
+              />
             </div>
             <p className="text-sm text-neutral-300 max-w-3xl leading-relaxed">{movieData.overview}</p>
           </div>
