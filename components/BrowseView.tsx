@@ -30,18 +30,18 @@ export default async function BrowseView({ type, genre, page }: Props) {
   };
 
   const pagerClass =
-    'rounded-lg border border-neutral-800 px-4 py-2 text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-sky-400 hover:text-white transition';
+    'rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-neutral-600 hover:text-white transition';
 
   return (
-    <section className="px-4 md:px-10 py-6">
-      <div className="flex items-center justify-between gap-3 mb-6">
+    <section className="max-w-7xl mx-auto px-4 md:px-10 py-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
             <span className="w-1.5 h-5 bg-sky-400 rounded-full inline-block" />
             {title}
           </h1>
           {genreName && (
-            <span className="rounded-full border border-sky-400/40 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-bold text-sky-300">
+            <span className="rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-0.5 text-xs font-semibold text-sky-300">
               {genreName}
             </span>
           )}
@@ -50,29 +50,36 @@ export default async function BrowseView({ type, genre, page }: Props) {
       </div>
 
       {results.length === 0 ? (
-        <div className="text-neutral-400 text-sm">Nothing found.</div>
+        <div className="w-full py-24 flex items-center justify-center text-neutral-400 text-sm bg-neutral-950/50 rounded-2xl border border-neutral-900">
+          Nothing found.
+        </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {results.map((item) => (
-            <PosterCard
-              key={item.id}
-              className="w-full"
-              href={type === 'tv' ? `/tv/${item.id}` : `/watch/${item.id}`}
-              title={item.title || item.name || 'Untitled'}
-              posterPath={item.poster_path}
-              rating={item.vote_average}
-            />
+            <div 
+              key={item.id} 
+              className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg flex flex-col"
+            >
+              <PosterCard
+                className="w-full"
+                href={type === 'tv' ? `/tv/${item.id}?season=1&episode=1` : `/watch/${item.id}`}
+                title={item.title || item.name || 'Untitled'}
+                posterPath={item.poster_path}
+                rating={item.vote_average}
+              />
+            </div>
           ))}
         </div>
       )}
 
-      <div className="mt-8 flex items-center justify-center gap-4">
+      {/* Pagination Controls */}
+      <div className="mt-10 flex items-center justify-center gap-4">
         {pageNum > 1 && (
           <Link href={linkFor(pageNum - 1)} className={pagerClass}>
             ← Previous
           </Link>
         )}
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-neutral-400 font-medium">
           Page {pageNum} of {totalPages}
         </span>
         {pageNum < totalPages && (

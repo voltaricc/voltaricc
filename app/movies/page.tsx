@@ -7,8 +7,9 @@ export default async function MoviesPage({
   searchParams: Promise<{ genre?: string; page?: string }>;
 }) {
   const sp = await searchParams;
+  
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-16">
+    <main className="min-h-screen bg-black text-white pb-40">
       <Header />
       <BrowseView type="movie" genre={sp.genre} page={sp.page} />
     </main>

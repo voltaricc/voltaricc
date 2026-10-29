@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import PosterCard from '@/components/PosterCard';
 import { getSupabase } from '@/lib/supabase/client';
 
 type WatchlistItem = {
@@ -15,162 +14,99 @@ type WatchlistItem = {
   vote_average: number | null;
 };
 
-type HistoryItem = {
-  id: string;
-  media_id: number | string;
-  media_type: 'movie' | 'tv';
-  title: string;
-  poster_path: string | null;
-  season?: number | null;
-  episode?: number | null;
-};
-
 export default function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'history'>('watchlist');
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadWatchlist() {
       try {
         const supabase = getSupabase();
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
-        let dbHistory: HistoryItem[] = [];
-        let dbWatchlist: WatchlistItem[] = [];
-
         if (user) {
-          const [wl, hist] = await Promise.all([
-            supabase
-              .from('watchlist')
-              .select('id, media_id, media_type, title, poster_path, vote_average')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false }),
-            supabase
-              .from('watch_history')
-              .select('id, media_id, media_type, title, poster_path, season, episode')
-              .eq('user_id', user.id)
-              .order('watched_at', { ascending: false })
-              .limit(200),
-          ]);
+          const { data, error } = await supabase
+            .from('watchlist')
+            .select('id, media_id, media_type, title, poster_path, vote_average')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-          if (wl.data) dbWatchlist = wl.data as WatchlistItem[];
-          if (hist.data) dbHistory = hist.data as HistoryItem[];
-        }
-
-        // Fallback & sync with localStorage history
-        let localHistory: HistoryItem[] = [];
-        try {
-          const savedHistory = localStorage.getItem('watch_history');
-          if (savedHistory) {
-            const parsed = JSON.parse(savedHistory);
-            localHistory = parsed.map((item: any) => ({
-              id: `local-${item.type}-${item.id}`,
-              media_id: item.id,
-              media_type: item.type,
-              title: item.title,
-              poster_path: item.posterPath,
-              season: item.season || null,
-              episode: item.episode || null,
-            }));
+          if (data) {
+            setWatchlist(data as WatchlistItem[]);
           }
-        } catch (e) {
-          console.error('Failed to parse local watch history:', e);
         }
-
-        // Combine DB and local history, removing duplicates
-        const combinedHistory = [...dbHistory, ...localHistory];
-        const seen = new Set<string>();
-        const uniqueHistory = combinedHistory.filter((row) => {
-          const key = `${row.media_type}-${row.media_id}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-
-        setWatchlist(dbWatchlist);
-        setHistory(uniqueHistory);
       } catch (err) {
-        console.error('Could not load library:', err);
+        console.error('Could not load watchlist:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadData();
+    loadWatchlist();
   }, []);
 
-  const tabClass = (active: boolean) =>
-    `text-sm font-bold pb-2 transition border-b-2 cursor-pointer ${
-      active ? 'border-sky-400 text-white' : 'border-transparent text-neutral-400 hover:text-white'
-    }`;
-
-  const grid =
-    'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4';
-
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-16">
+    <main className="min-h-screen bg-black text-white pb-40">
       <Header />
 
-      <section className="px-4 md:px-10 pt-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-extrabold mb-6 tracking-tight">My Library</h1>
-
-        <div className="flex gap-6 border-b border-neutral-800 mb-8">
-          <button onClick={() => setActiveTab('watchlist')} className={tabClass(activeTab === 'watchlist')}>
-            My List ({watchlist.length})
-          </button>
-          <button onClick={() => setActiveTab('history')} className={tabClass(activeTab === 'history')}>
-            Recently Watched ({history.length})
-          </button>
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">My Library</h1>
+          <p className="text-xs md:text-sm text-neutral-400 mt-1">
+            Your saved movies and TV shows.
+          </p>
         </div>
 
         {loading ? (
           <p className="text-neutral-400 text-sm">Loading your library...</p>
-        ) : activeTab === 'watchlist' ? (
-          watchlist.length === 0 ? (
-            <p className="text-neutral-400 text-sm">
-              Your list is empty. Add titles from any movie or show page!
-            </p>
-          ) : (
-            <div className={grid}>
-              {watchlist.map((item) => (
-                <PosterCard
-                  key={item.id}
-                  className="w-full"
-                  href={item.media_type === 'movie' ? `/watch/${item.media_id}` : `/tv/${item.media_id}`}
-                  title={item.title}
-                  posterPath={item.poster_path}
-                  rating={item.vote_average ?? undefined}
-                />
-              ))}
-            </div>
-          )
-        ) : history.length === 0 ? (
-          <p className="text-neutral-400 text-sm">No watch history yet.</p>
+        ) : watchlist.length === 0 ? (
+          <div className="w-full py-24 flex flex-col items-center justify-center text-center space-y-3 bg-neutral-950/50 rounded-2xl border border-neutral-900">
+            <p className="text-neutral-400 text-sm">Your list is empty. Add titles from any movie or show page!</p>
+            <Link
+              href="/"
+              className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-neutral-200 transition"
+            >
+              Explore Movies & TV Shows
+            </Link>
+          </div>
         ) : (
-          <div className={grid}>
-            {history.map((item) => (
-              <PosterCard
-                key={`${item.media_type}-${item.media_id}`}
-                className="w-full"
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {watchlist.map((item) => (
+              <Link
+                key={item.id}
                 href={
                   item.media_type === 'movie'
                     ? `/watch/${item.media_id}`
-                    : `/tv/${item.media_id}?season=${item.season || 1}&episode=${item.episode || 1}`
+                    : `/tv/${item.media_id}?season=1&episode=1`
                 }
-                title={item.title}
-                posterPath={item.poster_path}
-                subtitle={
-                  item.media_type === 'tv' ? `S${item.season || 1} · E${item.episode || 1}` : undefined
-                }
-              />
+                className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg flex flex-col"
+              >
+                <div className="aspect-[2/3] w-full bg-neutral-950 relative overflow-hidden">
+                  {item.poster_path ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
+                      {item.title}
+                    </div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">
+                    ★ {item.vote_average?.toFixed(1) || 'N/A'}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }
