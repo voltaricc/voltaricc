@@ -1,6 +1,7 @@
 import Header from '@/components/Header';
 import TVPlayerClient from '@/components/TVPlayerClient';
 import WatchTracker from '@/components/WatchTracker';
+import WatchlistButton from '@/components/WatchlistButton';
 
 export default async function TVShowPage({
   params,
@@ -36,7 +37,7 @@ export default async function TVShowPage({
     }
   }
 
-  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=DC2626`;
+  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=38BDF8`;
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
@@ -56,13 +57,25 @@ export default async function TVShowPage({
             className="w-full h-full object-cover opacity-40 blur-sm scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-          <div className="absolute bottom-6 max-w-7xl mx-auto px-4 md:px-10 w-full">
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
-              {showData.name}
-            </h1>
-            <p className="text-xs md:text-sm text-neutral-300 mt-2 line-clamp-2 max-w-2xl drop-shadow">
-              {showData.overview}
-            </p>
+          <div className="absolute bottom-6 max-w-7xl mx-auto px-4 md:px-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+                {showData.name}
+              </h1>
+              <p className="text-xs md:text-sm text-neutral-300 mt-2 line-clamp-2 max-w-2xl drop-shadow">
+                {showData.overview}
+              </p>
+            </div>
+            {/* Added Watchlist Button to TV Hero Banner */}
+            <div className="shrink-0">
+              <WatchlistButton
+                mediaId={id}
+                mediaType="tv"
+                title={showData.name}
+                posterPath={showData.poster_path}
+                voteAverage={showData.vote_average}
+              />
+            </div>
           </div>
         </div>
       )}
