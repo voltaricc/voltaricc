@@ -7,74 +7,57 @@ export default function WatchTracker({
   mediaType,
   title,
   posterPath,
+  runtimeMinutes,
 }: {
   id: string;
   mediaType: 'movie' | 'tv';
   title: string;
   posterPath?: string;
+  runtimeMinutes?: number;
 }) {
   useEffect(() => {
     if (!id || !title) return;
 
-    // 1. Instantly log/update history when opening the watch page
-    const historyItem = {
-      id,
-      mediaType,
-      title,
-      posterPath,
-      currentTime: 0,
-      duration: 0,
-      progressPercent: 5, // Initial starting progress so it shows up immediately
-      updatedAt: Date.now(),
-    };
-
+    // Use actual TMDB runtime in seconds, or default to 120m for movies / 45m for TV shows
+    const totalDurationSeconds = (runtimeMinutes || (mediaType === 'movie' ? 120 : 45)) * 60;
+    
+    // Check if there's already saved progress so it resumes smoothly
+    let elapsedSeconds = 0;
     try {
       const existingHistory = JSON.parse(localStorage.getItem('voltarix_history') || '{}');
-      // Only overwrite if it doesn't already exist or to bump timestamp to the top
-      existingHistory[id] = {
-        ...historyItem,
-        progressPercent: existingHistory[id]?.progressPercent || 5,
-      };
-      localStorage.setItem('voltarix_history', JSON.stringify(existingHistory));
-      window.dispatchEvent(new Event('voltarix_history_updated'));
-    } catch (e) {
-      console.error('Failed to save watch history:', e);
-    }
-
-    // 2. Fallback message listener for iframes that do support postMessage
-    function handlePlayerMessage(event: MessageEvent) {
-      if (typeof event.data !== 'string') return;
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload.event === 'timeupdate' && payload.currentTime) {
-          const currentTime = Math.floor(payload.currentTime);
-          const duration = Math.floor(payload.duration || 0);
-          const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 5;
-
-          const updatedItem = {
-            id,
-            mediaType,
-            title,
-            posterPath,
-            currentTime,
-            duration,
-            progressPercent: Math.round(progressPercent),
-            updatedAt: Date.now(),
-          };
-
-          const history = JSON.parse(localStorage.getItem('voltarix_history') || '{}');
-          history[id] = updatedItem;
-          localStorage.setItem('voltarix_history', JSON.stringify(history));
-          window.dispatchEvent(new Event('voltarix_history_updated'));
-        }
-      } catch (err) {
-        // Ignore non-json messages
+      if (existingHistory[id]?.currentTime) {
+        elapsedSeconds = existingHistory[id].currentTime;
       }
-    }
+    } catch (e) {}
 
-    window.addEventListener('message', handlePlayerMessage);
-    return () => window.removeEventListener('message', handlePlayerMessage);
-  }, [id, mediaType, title, posterPath]);
+    const saveProgress = () => {
+      elapsedSeconds += 5; // Add 5 real seconds every 5 seconds
+      const progressPercent = Math.min(99, Math.round((elapsedSeconds / totalDurationSeconds) * 100));
+
+      try {
+        const history = JSON.parse(localStorage.getItem('voltarix_history') || '{}');
+        history[id] = {
+          id,
+          mediaType,
+          title,
+          posterPath,
+          currentTime: elapsedSeconds,
+          duration: totalDurationSeconds,
+          progressPercent,
+          updatedAt: Date.now(),
+        };
+        localStorage.setItem('voltarix_history', JSON.stringify(history));
+        window.dispatchEvent(new Event('voltarix_history_updated'));
+      } catch (e) {
+        console.error('Failed to sync progress:', e);
+      }
+    };
+
+    // Run every 5 seconds to accurately track real elapsed watch time
+    const timer = setInterval(saveProgress, 5000);
+
+    return () => clearInterval(timer);
+  }, [id, mediaType, title, posterPath, runtimeMinutes]);
 
   return null;
 }

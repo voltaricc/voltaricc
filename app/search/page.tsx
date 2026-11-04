@@ -95,13 +95,19 @@ function SearchResults() {
                 href={isMovie ? `/watch/${item.id}` : `/tv/${item.id}`}
                 className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300"
               >
-                <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950">
+                <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950 relative">
                   <img
                     src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
                     alt={title}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
+
+                  {/* Movie / TV Show Badge Tag */}
+                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow z-10">
+                    {isMovie ? 'Movie' : 'TV Show'}
+                  </span>
                 </div>
+
                 <div className="p-2.5">
                   <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
                     {title}

@@ -5,71 +5,85 @@ import Link from 'next/link';
 
 export default function ContinueWatching() {
   const [history, setHistory] = useState<any[]>([]);
-
-  const fetchHistory = () => {
-    const saved = localStorage.getItem('voltarix_history');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const items = Object.values(parsed).sort((a: any, b: any) => b.updatedAt - a.updatedAt);
-        setHistory(items);
-      } catch (e) {
-        console.error('Failed to parse watch history:', e);
-      }
-    } else {
-      setHistory([]);
-    }
-  };
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchHistory();
-    window.addEventListener('voltarix_history_updated', fetchHistory);
-    window.addEventListener('storage', fetchHistory);
-    return () => {
-      window.removeEventListener('voltarix_history_updated', fetchHistory);
-      window.removeEventListener('storage', fetchHistory);
-    };
+    setMounted(true);
+    try {
+      const stored = localStorage.getItem('voltarix_watch_history');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setHistory(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load watch history:', e);
+    }
   }, []);
 
-  if (history.length === 0) return null;
+  // Prevent hydration mismatch
+  if (!mounted) return null;
+
+  // Show a clean empty state card instead of disappearing completely
+  if (history.length === 0) {
+    return (
+      <section className="max-w-7xl mx-auto px-4 md:px-12 mt-12 space-y-4">
+        <h2 className="text-xl md:text-2xl font-bold tracking-wide text-white">Continue Watching</h2>
+        <div className="bg-neutral-900/40 border border-neutral-800/60 rounded-2xl p-6 text-neutral-400 text-sm flex items-center justify-between">
+          <span>No active watch history yet. Start watching a movie or TV show to track your progress here!</span>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 md:px-10 py-6 space-y-4 animate-fade-in">
-      <h2 className="text-lg md:text-xl font-bold tracking-tight text-white">Continue Watching</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {history.map((item) => (
-          <Link
-            key={item.id}
-            href={item.mediaType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}?season=1&episode=1`}
-            className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg"
-          >
-            <div className="aspect-video w-full bg-neutral-950 relative overflow-hidden">
-              {item.posterPath ? (
+    <section className="max-w-7xl mx-auto px-4 md:px-12 mt-12 space-y-4">
+      <h2 className="text-xl md:text-2xl font-bold tracking-wide text-white">Continue Watching</h2>
+      
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth">
+        {history.map((item) => {
+          const posterPath = item.posterPath
+            ? `https://image.tmdb.org/t/p/w500${item.posterPath}`
+            : '/placeholder.png';
+          const linkHref = `/${item.mediaType}/${item.id}`;
+
+          return (
+            <Link
+              key={item.id}
+              href={linkHref}
+              className="flex-none w-[180px] md:w-[220px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-neutral-600 transition-all shadow-lg hover:scale-105"
+            >
+              <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950">
                 <img
-                  src={`https://image.tmdb.org/t/p/w500${item.posterPath}`}
+                  src={posterPath}
                   alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
-                  {item.title}
+                
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                {/* Movie / TV Show Badge Tag */}
+                <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
+                  {item.mediaType === 'movie' ? 'Movie' : 'TV Show'}
+                </span>
+
+                {/* Progress bar overlay at bottom of poster */}
+                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
+                  <div 
+                    className="h-full bg-red-600" 
+                    style={{ width: `${item.progressPercent || 0}%` }} 
+                  />
                 </div>
-              )}
-              <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
-                <div
-                  className="h-full bg-red-600 transition-all duration-300"
-                  style={{ width: `${item.progressPercent}%` }}
-                />
               </div>
-            </div>
-            <div className="p-3">
-              <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
-              <p className="text-[10px] text-neutral-400 mt-0.5 capitalize">
-                {item.mediaType} • {item.progressPercent}% watched
-              </p>
-            </div>
-          </Link>
-        ))}
+
+              <div className="p-3">
+                <h3 className="text-sm font-semibold text-white truncate">{item.title}</h3>
+                <p className="text-xs text-neutral-400 mt-1">Resume playback</p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

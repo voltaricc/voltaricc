@@ -8,6 +8,7 @@ interface PosterCardProps {
   posterPath: string | null;
   rating?: number;
   subtitle?: string;
+  mediaType?: 'movie' | 'tv';
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export default function PosterCard({
   posterPath,
   rating,
   subtitle,
+  mediaType,
   className = '',
 }: PosterCardProps) {
   const imageUrl = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null;
@@ -39,8 +41,16 @@ export default function PosterCard({
           </div>
         )}
 
+        {/* Media Type Badge Tag (Top Left) */}
+        {mediaType && (
+          <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow z-10">
+            {mediaType === 'movie' ? 'Movie' : 'TV Show'}
+          </span>
+        )}
+
+        {/* Rating Badge (Top Right) */}
         {rating !== undefined && rating > 0 && (
-          <div className="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-md text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-md">
+          <div className="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-md text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-md z-10">
             ★ {rating.toFixed(1)}
           </div>
         )}

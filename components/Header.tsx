@@ -16,7 +16,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-neutral-900 px-3 md:px-10 py-3 md:py-4 flex items-center justify-between gap-2 md:gap-6">
+    <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10 px-3 md:px-10 py-3 md:py-4 flex items-center justify-between gap-2 md:gap-6">
       {/* Logo */}
       <Link href="/" className="text-base md:text-2xl font-black tracking-wider text-white hover:text-sky-400 transition shrink-0">
         VOLTARIX
