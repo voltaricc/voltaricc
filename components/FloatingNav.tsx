@@ -11,7 +11,7 @@ export default function FloatingNav() {
     { label: 'Movies', href: '/movies' },
     { label: 'TV Shows', href: '/tv' },
     { label: 'My Library', href: '/library' },
-    { label: 'History', href: '/history' }, // Fixed route from '/' to '/history'
+    { label: 'History', href: '/history' },
   ];
 
   return (
@@ -26,7 +26,7 @@ export default function FloatingNav() {
               className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-300 ${
                 isActive
                   ? 'bg-white text-black shadow-md shadow-white/20 scale-105'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800/40'
+                  : 'text-neutral-400 hover:text-sky-400 hover:bg-sky-500/10'
               }`}
             >
               {item.label}

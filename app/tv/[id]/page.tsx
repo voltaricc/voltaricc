@@ -1,6 +1,7 @@
 import Header from '@/components/Header';
 import TVPlayerClient from '@/components/TVPlayerClient';
 import WatchTracker from '@/components/WatchTracker';
+import WatchlistButton from '@/components/WatchlistButton';
 
 export default async function TVShowPage({
   params,
@@ -36,7 +37,7 @@ export default async function TVShowPage({
     }
   }
 
-  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=DC2626`;
+  const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=38BDF8`;
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
@@ -49,18 +50,18 @@ export default async function TVShowPage({
       />
       
       {showData?.backdrop_path && (
-        <div className="relative w-full h-[35vh] md:h-[45vh] overflow-hidden border-b border-neutral-900">
+        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16">
           <img
             src={`https://image.tmdb.org/t/p/original${showData.backdrop_path}`}
             alt=""
-            className="w-full h-full object-cover opacity-40 blur-sm scale-105"
+            className="absolute inset-0 w-full h-full object-cover opacity-40 blur-sm scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-          <div className="absolute bottom-6 max-w-7xl mx-auto px-4 md:px-10 w-full">
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
+          <div className="relative max-w-7xl mx-auto px-4 md:px-10 w-full space-y-2">
             <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
               {showData.name}
             </h1>
-            <p className="text-xs md:text-sm text-neutral-300 mt-2 line-clamp-2 max-w-2xl drop-shadow">
+            <p className="text-xs md:text-sm text-neutral-300 max-w-3xl leading-relaxed drop-shadow">
               {showData.overview}
             </p>
           </div>
@@ -77,6 +78,27 @@ export default async function TVShowPage({
             title={showData?.name || 'TV Show Player'}
           />
         </div>
+
+        {showData && (
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
+                <span className="text-sky-400 font-bold">★ {showData.vote_average?.toFixed(1)}</span>
+                <span>{showData.first_air_date?.split('-')[0]}</span>
+                {showData.number_of_seasons && (
+                  <span>{showData.number_of_seasons} {showData.number_of_seasons === 1 ? 'Season' : 'Seasons'}</span>
+                )}
+              </div>
+              <WatchlistButton
+                mediaId={id}
+                mediaType="tv"
+                title={showData.name}
+                posterPath={showData.poster_path}
+                voteAverage={showData.vote_average}
+              />
+            </div>
+          </div>
+        )}
 
         {showData && (
           <TVPlayerClient

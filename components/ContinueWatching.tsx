@@ -68,10 +68,10 @@ export default function ContinueWatching() {
                   {item.mediaType === 'movie' ? 'Movie' : 'TV Show'}
                 </span>
 
-                {/* Progress bar overlay at bottom of poster */}
+                {/* Progress bar overlay with blue accent */}
                 <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
                   <div 
-                    className="h-full bg-red-600" 
+                    className="h-full bg-sky-500" 
                     style={{ width: `${item.progressPercent || 0}%` }} 
                   />
                 </div>

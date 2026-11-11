@@ -3,7 +3,6 @@ import Header from '@/components/Header';
 import ContinueWatching from '@/components/ContinueWatching';
 import HeroSlider from '@/components/HeroSlider';
 
-// Robust fetch helper using URL to handle query parameters correctly
 async function fetchTMDB(endpoint: string, apiKey: string) {
   if (!apiKey) return { results: [] };
   try {
@@ -41,7 +40,6 @@ export default async function HomePage() {
 
   try {
     if (apiKey) {
-      // 1. Fetch Hero Items
       const trendingRes = await fetchTMDB('trending/all/day', apiKey);
       const trending = trendingRes.results?.slice(0, 5) || [];
 
@@ -69,7 +67,6 @@ export default async function HomePage() {
       );
     }
 
-    // 2. Fetch Trending & Genre Rows concurrently
     [
       trendingMovies,
       trendingTV,
@@ -94,14 +91,9 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen bg-black text-white pb-40">
       <Header />
-
-      {/* Sliding Hero Banner */}
       <HeroSlider items={heroItems} />
-
-      {/* Continue Watching Row */}
       <ContinueWatching />
 
-      {/* Content Rows Container */}
       <div className="max-w-7xl mx-auto px-4 md:px-12 space-y-12 mt-10">
         {trendingMovies.results?.length > 0 && (
           <MediaRow title="Trending Movies" items={trendingMovies.results} mediaType="movie" />
@@ -129,7 +121,6 @@ export default async function HomePage() {
   );
 }
 
-// Reusable Media Row
 function MediaRow({ title, items, mediaType }: { title: string; items: any[]; mediaType: 'movie' | 'tv' }) {
   if (!items || items.length === 0) return null;
 
@@ -143,13 +134,13 @@ function MediaRow({ title, items, mediaType }: { title: string; items: any[]; me
             : '/placeholder.png';
           const name = item.title || item.name;
           const resolvedMediaType = item.media_type || mediaType;
-          const linkHref = `/${resolvedMediaType}/${item.id}`;
+          const linkHref = resolvedMediaType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}`;
 
           return (
             <Link
               key={item.id}
               href={linkHref}
-              className="flex-none w-[180px] md:w-[220px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-neutral-600 transition-all shadow-lg hover:scale-105"
+              className="flex-none w-[180px] md:w-[220px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-105"
             >
               <div className="relative aspect-[2/3] w-full overflow-hidden">
                 <img
@@ -159,16 +150,17 @@ function MediaRow({ title, items, mediaType }: { title: string; items: any[]; me
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
                 
-                {/* Movie / TV Show Badge Tag */}
                 <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
                   {resolvedMediaType === 'movie' ? 'Movie' : 'TV Show'}
                 </span>
               </div>
 
               <div className="p-3">
-                <h3 className="text-sm font-semibold text-white truncate">{name}</h3>
+                <h3 className="text-sm font-semibold text-white truncate group-hover:text-sky-400 transition-colors">
+                  {name}
+                </h3>
                 <div className="flex items-center justify-between text-xs text-neutral-400 mt-1">
-                  <span>★ {item.vote_average?.toFixed(1) || 'N/A'}</span>
+                  <span className="text-sky-400/90 font-medium">★ {item.vote_average?.toFixed(1) || 'N/A'}</span>
                   <span>{item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || ''}</span>
                 </div>
               </div>

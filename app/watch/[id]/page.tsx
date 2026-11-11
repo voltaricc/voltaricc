@@ -21,7 +21,7 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
   const embedUrl = `https://vidy.st/movie/${id}?color=38BDF8`;
 
   return (
-    <main className="min-h-screen bg-black text-white pb-40">
+    <main className="min-h-screen bg-black text-white pb-20">
       <Header />
       <WatchTracker 
         id={id} 
@@ -30,7 +30,27 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
         posterPath={movieData?.poster_path} 
         runtimeMinutes={movieData?.runtime}
       />
-      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
+      
+      {movieData?.backdrop_path && (
+        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16">
+          <img
+            src={`https://image.tmdb.org/t/p/original${movieData.backdrop_path}`}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-40 blur-sm scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
+          <div className="relative max-w-7xl mx-auto px-4 md:px-10 w-full space-y-2">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+              {movieData.title}
+            </h1>
+            <p className="text-xs md:text-sm text-neutral-300 max-w-3xl leading-relaxed drop-shadow">
+              {movieData.overview}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
         <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
           <iframe
             src={embedUrl}
@@ -44,13 +64,10 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
         {movieData && (
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{movieData.title}</h1>
-                <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400 mt-1">
-                  <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
-                  <span>{movieData.release_date?.split('-')[0]}</span>
-                  <span>{movieData.runtime} mins</span>
-                </div>
+              <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
+                <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
+                <span>{movieData.release_date?.split('-')[0]}</span>
+                <span>{movieData.runtime} mins</span>
               </div>
               <WatchlistButton
                 mediaId={id}
@@ -60,7 +77,6 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
                 voteAverage={movieData.vote_average}
               />
             </div>
-            <p className="text-sm text-neutral-300 max-w-3xl leading-relaxed">{movieData.overview}</p>
           </div>
         )}
       </div>
