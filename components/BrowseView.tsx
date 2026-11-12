@@ -14,7 +14,6 @@ export default async function BrowseView({ type, genre, page }: Props) {
   const basePath = type === 'movie' ? '/movies' : '/tv';
   const title = type === 'movie' ? 'Movies' : 'TV Shows';
 
-  // Only accept genres from our own list, and keep the page number sensible.
   const activeGenre = genre && genres.some((g) => String(g.id) === genre) ? genre : undefined;
   const genreName = genres.find((g) => String(g.id) === activeGenre)?.name;
   const pageNum = Math.max(1, Math.min(500, parseInt(page ?? '1', 10) || 1));
@@ -30,14 +29,16 @@ export default async function BrowseView({ type, genre, page }: Props) {
   };
 
   const pagerClass =
-    'rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-neutral-600 hover:text-white transition';
+    'rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-sky-500/50 hover:text-sky-400 hover:bg-sky-500/10 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300';
 
   return (
     <section className="max-w-7xl mx-auto px-4 md:px-10 py-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-sky-400 rounded-full inline-block" />
+          <h1
+            className="text-2xl md:text-3xl font-bold tracking-tight text-white"
+            style={{ fontFamily: "'YouTube Sans', sans-serif" }}
+          >
             {title}
           </h1>
           {genreName && (
@@ -58,7 +59,7 @@ export default async function BrowseView({ type, genre, page }: Props) {
           {results.map((item) => (
             <div 
               key={item.id} 
-              className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg flex flex-col"
+              className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02] flex flex-col"
             >
               <PosterCard
                 className="w-full"

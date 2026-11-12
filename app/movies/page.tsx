@@ -9,7 +9,7 @@ export default async function MoviesPage({
   const sp = await searchParams;
   
   return (
-    <main className="min-h-screen bg-black text-white pb-40">
+    <main className="min-h-screen bg-black text-white pt-24 pb-40">
       <Header />
       <BrowseView type="movie" genre={sp.genre} page={sp.page} />
     </main>

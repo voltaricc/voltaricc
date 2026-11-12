@@ -2,9 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function FloatingNav() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navItems = [
     { label: 'Home', href: '/' },
@@ -18,7 +24,7 @@ export default function FloatingNav() {
     <nav aria-label="Floating Navigation" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
       <div className="flex items-center gap-1 sm:gap-2 px-3 py-2 bg-neutral-950/40 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl shadow-black/80">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = mounted && pathname === item.href;
           return (
             <Link
               key={item.href}
