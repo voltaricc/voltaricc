@@ -18,9 +18,9 @@ export default function Header() {
   return (
     <div className="fixed top-6 inset-x-0 z-50 px-4 md:px-12 pointer-events-none flex justify-center">
       <header className="w-full max-w-7xl bg-neutral-950/40 backdrop-blur-2xl border border-white/10 rounded-full px-4 md:px-8 py-2.5 md:py-3 flex items-center justify-between gap-4 shadow-2xl shadow-black/80 pointer-events-auto">
-        {/* Logo with Tilt Warp Font */}
-        <Link 
-          href="/" 
+        {/* Logo */}
+        <Link
+          href="/"
           className="text-lg md:text-2xl font-normal tracking-wide text-white hover:text-sky-400 transition-colors shrink-0"
           style={{ fontFamily: "'Tilt Warp', cursive" }}
         >
@@ -40,8 +40,35 @@ export default function Header() {
 
         {/* Profile / Avatar */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-sky-500 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-sky-500/20">
-            H
+          <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#F5EFE6] border border-white/20 hover:border-sky-400/80 flex items-center justify-center overflow-hidden shadow-md hover:shadow-sky-500/20 transition-all duration-300">
+            {/* If you save the image to public/profile.png, you can swap this SVG for:
+                <img src="/profile.png" alt="Voltarix Profile" className="w-full h-full object-cover" /> */}
+            <svg viewBox="0 0 100 100" className="w-full h-full" aria-label="Voltarix Profile">
+              <rect width="100" height="100" fill="#F5EFE6" />
+              {/* Back arc of the orbital ring */}
+              <path
+                d="M 27 56 C 14 63, 9 72, 16 76"
+                fill="none"
+                stroke="#0B1320"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              />
+              {/* Bold V Monogram */}
+              <polygon points="23,28 41,28 50,55 59,28 77,28 50,86" fill="#0B1320" />
+              {/* Front sweeping orbital swoosh */}
+              <path
+                d="M 16 76 C 32 84, 78 65, 90 46 C 95 38, 86 35, 70 39"
+                fill="none"
+                stroke="#0B1320"
+                strokeWidth="4.2"
+                strokeLinecap="round"
+              />
+              {/* Four-point star */}
+              <path
+                d="M 86 14 Q 86 22 94 22 Q 86 22 86 30 Q 86 22 78 22 Q 86 22 86 14 Z"
+                fill="#0B1320"
+              />
+            </svg>
           </div>
         </div>
       </header>

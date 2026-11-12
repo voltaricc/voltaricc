@@ -15,7 +15,7 @@ export default function FloatingNav() {
   const navItems = [
     { label: 'Home', href: '/' },
     { label: 'Movies', href: '/movies' },
-    { label: 'TV Shows', href: '/tv' },
+    { label: 'TV', href: '/tv' },
     { label: 'My Library', href: '/library' },
     { label: 'History', href: '/history' },
   ];

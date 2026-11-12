@@ -15,6 +15,9 @@ export default async function TVShowPage({
   const currentSeason = resolvedSearch.season || '1';
   const currentEpisode = resolvedSearch.episode || '1';
 
+  const seasonNumber = parseInt(currentSeason, 10) || 1;
+  const episodeNumber = parseInt(currentEpisode, 10) || 1;
+
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
 
   let showData: any = null;
@@ -37,20 +40,29 @@ export default async function TVShowPage({
     }
   }
 
+  const activeEpisodeObj = seasonData?.episodes?.find(
+    (ep: any) => ep.episode_number === episodeNumber
+  );
+  const episodeRuntime =
+    activeEpisodeObj?.runtime || showData?.episode_run_time?.[0] || 45;
+
   const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=38BDF8`;
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
       <Header />
-      <WatchTracker 
-        id={id} 
-        mediaType="tv" 
-        title={showData?.name || 'TV Show'} 
-        posterPath={showData?.poster_path} 
+      <WatchTracker
+        id={id}
+        mediaType="tv"
+        title={showData?.name || 'TV Show'}
+        posterPath={showData?.poster_path}
+        runtimeMinutes={episodeRuntime}
+        season={seasonNumber}
+        episode={episodeNumber}
       />
-      
+
       {showData?.backdrop_path && (
-        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16">
+        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16 pt-28">
           <img
             src={`https://image.tmdb.org/t/p/original${showData.backdrop_path}`}
             alt=""
@@ -58,7 +70,10 @@ export default async function TVShowPage({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
           <div className="relative max-w-7xl mx-auto px-4 md:px-10 w-full space-y-2">
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+            <h1
+              className="text-3xl md:text-5xl font-bold tracking-tight drop-shadow-lg"
+              style={{ fontFamily: "'YouTube Sans', sans-serif" }}
+            >
               {showData.name}
             </h1>
             <p className="text-xs md:text-sm text-neutral-300 max-w-3xl leading-relaxed drop-shadow">
@@ -86,7 +101,10 @@ export default async function TVShowPage({
                 <span className="text-sky-400 font-bold">★ {showData.vote_average?.toFixed(1)}</span>
                 <span>{showData.first_air_date?.split('-')[0]}</span>
                 {showData.number_of_seasons && (
-                  <span>{showData.number_of_seasons} {showData.number_of_seasons === 1 ? 'Season' : 'Seasons'}</span>
+                  <span>
+                    {showData.number_of_seasons}{' '}
+                    {showData.number_of_seasons === 1 ? 'Season' : 'Seasons'}
+                  </span>
                 )}
               </div>
               <WatchlistButton

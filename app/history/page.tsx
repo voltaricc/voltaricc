@@ -3,62 +3,45 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Link from 'next/link';
+import {
+  getSortedHistory,
+  readHistory,
+  writeHistory,
+  resumeHref,
+  HISTORY_KEY,
+  HISTORY_EVENT,
+  type HistoryEntry,
+} from '@/lib/watchHistory';
 
 export default function HistoryPage() {
-  const [historyItems, setHistoryItems] = useState<any[]>([]);
-
-  const loadHistory = () => {
-    const saved = localStorage.getItem('voltarix_history');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const sorted = Object.values(parsed).sort((a: any, b: any) => b.updatedAt - a.updatedAt);
-        setHistoryItems(sorted);
-      } catch (e) {
-        console.error('Failed to parse history:', e);
-      }
-    } else {
-      setHistoryItems([]);
-    }
-  };
+  const [historyItems, setHistoryItems] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
+    const loadHistory = () => setHistoryItems(getSortedHistory());
     loadHistory();
-    window.addEventListener('voltarix_history_updated', loadHistory);
+
+    window.addEventListener(HISTORY_EVENT, loadHistory);
     window.addEventListener('storage', loadHistory);
     return () => {
-      window.removeEventListener('voltarix_history_updated', loadHistory);
+      window.removeEventListener(HISTORY_EVENT, loadHistory);
       window.removeEventListener('storage', loadHistory);
     };
   }, []);
 
   const clearHistory = () => {
     if (window.confirm('Are you sure you want to clear your watch history?')) {
-      localStorage.removeItem('voltarix_history');
+      localStorage.removeItem(HISTORY_KEY);
       setHistoryItems([]);
-      window.dispatchEvent(new Event('voltarix_history_updated'));
+      window.dispatchEvent(new Event(HISTORY_EVENT));
     }
   };
 
   const removeItem = (itemKey: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const saved = localStorage.getItem('voltarix_history');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        delete parsed[itemKey];
-        const parts = itemKey.split('-');
-        if (parts.length > 1) {
-          delete parsed[parts[1]];
-        }
-        localStorage.setItem('voltarix_history', JSON.stringify(parsed));
-        loadHistory();
-        window.dispatchEvent(new Event('voltarix_history_updated'));
-      } catch (err) {
-        console.error('Failed to remove history item:', err);
-      }
-    }
+    const history = readHistory();
+    delete history[itemKey];
+    writeHistory(history);
   };
 
   return (
@@ -100,76 +83,68 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {historyItems.map((item) => {
-              const itemKey = item.storageKey || `${item.mediaType}-${item.id}`;
-              const resumeHref =
-                item.mediaType === 'movie'
-                  ? `/watch/${item.id}`
-                  : `/tv/${item.id}?season=${item.season || 1}&episode=${item.episode || 1}`;
-
-              return (
-                <Link
-                  key={itemKey}
-                  href={resumeHref}
-                  className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02] flex flex-col"
-                >
-                  <div className="aspect-video w-full bg-neutral-950 relative overflow-hidden">
-                    {item.posterPath ? (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w500${item.posterPath}`}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
-                        {item.title}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={(e) => removeItem(itemKey, e)}
-                      className="absolute top-2 right-2 bg-black/70 hover:bg-sky-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow-md z-10"
-                      title="Remove from history"
-                    >
-                      ✕
-                    </button>
-
-                    {/* Media Type Badge (Top-Left) */}
-                    <div className="absolute top-2 left-2 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
-                      {item.mediaType === 'movie' ? 'Movie' : 'TV Show'}
-                    </div>
-
-                    {/* Season / Episode Tag (Bottom-Right) */}
-                    {item.mediaType === 'tv' && (
-                      <div className="absolute bottom-3 right-2 px-2 py-0.5 text-[9px] font-bold tracking-wide bg-sky-950/80 backdrop-blur-md rounded-md text-sky-300 border border-sky-500/30 shadow">
-                        S{item.season || 1} • E{item.episode || 1}
-                      </div>
-                    )}
-
-                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
-                      <div
-                        className="h-full bg-sky-400 transition-all duration-300"
-                        style={{ width: `${item.progressPercent || 0}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="p-3 flex flex-col justify-between flex-1">
-                    <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
+            {historyItems.map((item) => (
+              <Link
+                key={item.storageKey}
+                href={resumeHref(item)}
+                className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02] flex flex-col"
+              >
+                <div className="aspect-video w-full bg-neutral-950 relative overflow-hidden">
+                  {item.posterPath ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w500${item.posterPath}`}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500 p-2 text-center">
                       {item.title}
-                    </p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[10px] text-sky-400/90 font-medium">
-                        {item.progressPercent ? `${Math.round(item.progressPercent)}% watched` : 'Watched'}
-                      </span>
-                      <span className="text-[10px] text-neutral-500">
-                        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''}
-                      </span>
                     </div>
+                  )}
+
+                  <button
+                    onClick={(e) => removeItem(item.storageKey, e)}
+                    className="absolute top-2 right-2 bg-black/70 hover:bg-sky-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow-md z-10"
+                    title="Remove from history"
+                  >
+                    ✕
+                  </button>
+
+                  {/* Media Type Badge (Top-Left) */}
+                  <div className="absolute top-2 left-2 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
+                    {item.mediaType === 'movie' ? 'Movie' : 'TV Show'}
                   </div>
-                </Link>
-              );
-            })}
+
+                  {/* Season / Episode Tag (Bottom-Right) */}
+                  {item.mediaType === 'tv' && (
+                    <div className="absolute bottom-3 right-2 px-2 py-0.5 text-[9px] font-bold tracking-wide bg-sky-950/80 backdrop-blur-md rounded-md text-sky-300 border border-sky-500/30 shadow">
+                      S{item.season || 1} • E{item.episode || 1}
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
+                    <div
+                      className="h-full bg-sky-400 transition-all duration-300"
+                      style={{ width: `${item.progressPercent || 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 flex flex-col justify-between flex-1">
+                  <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
+                    {item.title}
+                  </p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] text-sky-400/90 font-medium">
+                      {item.progressPercent ? `${Math.round(item.progressPercent)}% watched` : 'Watched'}
+                    </span>
+                    <span className="text-[10px] text-neutral-500">
+                      {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>

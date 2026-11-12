@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-
-const STORAGE_KEY = 'voltarix_history';
+import { makeKey, readHistory, writeHistory } from '@/lib/watchHistory';
 
 export default function WatchTracker({
   id,
@@ -25,19 +24,11 @@ export default function WatchTracker({
     if (!id || !title) return;
 
     const stringId = String(id);
-    const key = `${mediaType}-${stringId}`;
+    const key = makeKey(mediaType, stringId);
     const duration = (runtimeMinutes || (mediaType === 'movie' ? 120 : 45)) * 60;
 
-    const read = () => {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      } catch {
-        return {};
-      }
-    };
-
-    const existing = read()[key] || read()[stringId]; // Fallback to migrate old ID-only entries
-    // Reset elapsed time if switching to a different TV episode
+    const initialHistory = readHistory();
+    const existing = initialHistory[key] || initialHistory[stringId];
     const isSameEpisode =
       mediaType === 'movie' ||
       (existing?.season === season && existing?.episode === episode);
@@ -47,9 +38,8 @@ export default function WatchTracker({
 
     const save = () => {
       try {
-        const history = read();
-        // Clean up legacy unprefixed key if migrating
-        if (history[stringId]) delete history[stringId];
+        const history = readHistory();
+        if (history[stringId]) delete history[stringId]; // clean up legacy unprefixed entry
 
         history[key] = {
           storageKey: key,
@@ -65,8 +55,7 @@ export default function WatchTracker({
           updatedAt: Date.now(),
         };
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        window.dispatchEvent(new Event('voltarix_history_updated'));
+        writeHistory(history);
       } catch (e) {
         console.error('Failed to sync watch history:', e);
       }
@@ -80,7 +69,6 @@ export default function WatchTracker({
       lastTick = document.hidden ? null : now;
     };
 
-    // Save immediately on mount so the visit is registered right away
     save();
 
     const onVisibility = () => {
