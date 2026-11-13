@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import WatchlistButton from '@/components/WatchlistButton';
 
 export default function HeroSlider({ items }: { items: any[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -18,6 +19,7 @@ export default function HeroSlider({ items }: { items: any[] }) {
   if (!items || items.length === 0) return null;
 
   const current = items[currentIndex];
+  const mediaType = current.media_type || (current.title ? 'movie' : 'tv');
 
   return (
     <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden">
@@ -41,7 +43,10 @@ export default function HeroSlider({ items }: { items: any[] }) {
             className="max-h-24 md:max-h-36 w-auto object-contain drop-shadow-lg"
           />
         ) : (
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+          <h1
+            className="text-3xl md:text-5xl font-bold tracking-tight drop-shadow-lg"
+            style={{ fontFamily: "'YouTube Sans', sans-serif" }}
+          >
             {current.title}
           </h1>
         )}
@@ -55,7 +60,7 @@ export default function HeroSlider({ items }: { items: any[] }) {
             {(current.release_date || current.first_air_date)?.split('-')[0]}
           </span>
           <span className="bg-neutral-800/80 text-neutral-300 px-2.5 py-1 rounded-md border border-neutral-700 capitalize">
-            {current.media_type}
+            {mediaType}
           </span>
         </div>
 
@@ -65,19 +70,20 @@ export default function HeroSlider({ items }: { items: any[] }) {
         </p>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center gap-3 pt-2">
           <Link
-            href={current.media_type === 'movie' ? `/watch/${current.id}` : `/tv/${current.id}?season=1&episode=1`}
+            href={mediaType === 'movie' ? `/watch/${current.id}` : `/tv/${current.id}?season=1&episode=1`}
             className="bg-white text-black font-bold px-6 py-3 rounded-xl hover:bg-neutral-200 transition shadow-lg text-sm flex items-center gap-2"
           >
             ▶ Play
           </Link>
-          <Link
-            href={current.media_type === 'movie' ? `/watch/${current.id}` : `/tv/${current.id}?season=1&episode=1`}
-            className="bg-neutral-800/80 hover:bg-neutral-700 text-white font-semibold px-6 py-3 rounded-xl transition backdrop-blur-md border border-neutral-700 text-sm flex items-center gap-2"
-          >
-            ⓘ More info
-          </Link>
+          <WatchlistButton
+            mediaId={current.id}
+            mediaType={mediaType}
+            title={current.title || current.name}
+            posterPath={current.poster_path}
+            voteAverage={current.vote_average}
+          />
         </div>
       </div>
 

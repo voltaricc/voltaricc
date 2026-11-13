@@ -16,7 +16,7 @@ export default function FloatingNav() {
     { label: 'Home', href: '/' },
     { label: 'Movies', href: '/movies' },
     { label: 'TV', href: '/tv' },
-    { label: 'My Library', href: '/library' },
+    { label: 'Library', href: '/library' },
     { label: 'History', href: '/history' },
   ];
 

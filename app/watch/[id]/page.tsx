@@ -1,6 +1,7 @@
 import Header from '@/components/Header';
 import WatchTracker from '@/components/WatchTracker';
 import WatchlistButton from '@/components/WatchlistButton';
+import AmbientPlayerWrapper from '@/components/AmbientPlayerWrapper';
 
 export default async function MovieWatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,7 +22,7 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
   const embedUrl = `https://vidy.st/movie/${id}?color=38BDF8`;
 
   return (
-    <main className="min-h-screen bg-black text-white pb-20">
+    <main className="min-h-screen bg-black text-white pb-36 overflow-x-hidden">
       <Header />
       <WatchTracker 
         id={id} 
@@ -31,8 +32,8 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
         runtimeMinutes={movieData?.runtime}
       />
       
-      {movieData?.backdrop_path && (
-        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16">
+      {movieData?.backdrop_path ? (
+        <div className="relative w-full overflow-hidden border-b border-neutral-900 pt-28 pb-12 md:pb-16">
           <img
             src={`https://image.tmdb.org/t/p/original${movieData.backdrop_path}`}
             alt=""
@@ -40,7 +41,10 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
           <div className="relative max-w-7xl mx-auto px-4 md:px-10 w-full space-y-2">
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+            <h1
+              className="text-3xl md:text-5xl font-bold tracking-tight drop-shadow-lg"
+              style={{ fontFamily: "'YouTube Sans', sans-serif" }}
+            >
               {movieData.title}
             </h1>
             <p className="text-xs md:text-sm text-neutral-300 max-w-3xl leading-relaxed drop-shadow">
@@ -48,21 +52,19 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
             </p>
           </div>
         </div>
+      ) : (
+        <div className="pt-24" />
       )}
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
-        <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full border-0"
-            allowFullScreen
-            allow="encrypted-media; autoplay *; fullscreen *"
-            title={movieData?.title || 'Movie Player'}
-          />
-        </div>
+        <AmbientPlayerWrapper
+          embedUrl={embedUrl}
+          title={movieData?.title || 'Movie Player'}
+          imagePath={movieData?.backdrop_path || movieData?.poster_path}
+        />
 
         {movieData && (
-          <div className="space-y-4">
+          <div className="space-y-4 relative z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
                 <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>

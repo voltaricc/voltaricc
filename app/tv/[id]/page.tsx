@@ -49,7 +49,7 @@ export default async function TVShowPage({
   const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=38BDF8`;
 
   return (
-    <main className="min-h-screen bg-black text-white pb-20">
+    <main className="min-h-screen bg-black text-white pb-36 overflow-x-hidden">
       <Header />
       <WatchTracker
         id={id}
@@ -61,8 +61,8 @@ export default async function TVShowPage({
         episode={episodeNumber}
       />
 
-      {showData?.backdrop_path && (
-        <div className="relative w-full overflow-hidden border-b border-neutral-900 py-12 md:py-16 pt-28">
+      {showData?.backdrop_path ? (
+        <div className="relative w-full overflow-hidden border-b border-neutral-900 pt-28 pb-12 md:pb-16">
           <img
             src={`https://image.tmdb.org/t/p/original${showData.backdrop_path}`}
             alt=""
@@ -81,21 +81,44 @@ export default async function TVShowPage({
             </p>
           </div>
         </div>
+      ) : (
+        <div className="pt-24" />
       )}
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
-        <div className="w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl relative">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full border-0"
-            allowFullScreen
-            allow="encrypted-media; autoplay *; fullscreen *"
-            title={showData?.name || 'TV Show Player'}
-          />
+        {/* Enhanced Cinema Ambient Glow Player Wrapper */}
+        <div className="relative">
+          {(showData?.backdrop_path || showData?.poster_path) && (
+            <>
+              {/* Wide atmospheric ambient halo */}
+              <img
+                src={`https://image.tmdb.org/t/p/w780${showData.backdrop_path || showData.poster_path}`}
+                alt=""
+                aria-hidden="true"
+                className="absolute -inset-12 w-[calc(100%+6rem)] h-[calc(100%+6rem)] object-cover rounded-[3rem] blur-[100px] opacity-45 saturate-200 pointer-events-none select-none transition-opacity duration-700"
+              />
+              {/* Tighter inner edge glow */}
+              <img
+                src={`https://image.tmdb.org/t/p/w780${showData.backdrop_path || showData.poster_path}`}
+                alt=""
+                aria-hidden="true"
+                className="absolute -inset-4 w-[calc(100%+2rem)] h-[calc(100%+2rem)] object-cover rounded-3xl blur-3xl opacity-50 saturate-150 pointer-events-none select-none transition-opacity duration-700"
+              />
+            </>
+          )}
+          <div className="relative w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-white/15 shadow-2xl">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full border-0"
+              allowFullScreen
+              allow="encrypted-media; autoplay *; fullscreen *"
+              title={showData?.name || 'TV Show Player'}
+            />
+          </div>
         </div>
 
         {showData && (
-          <div className="space-y-4">
+          <div className="space-y-4 relative z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
                 <span className="text-sky-400 font-bold">★ {showData.vote_average?.toFixed(1)}</span>
@@ -119,13 +142,15 @@ export default async function TVShowPage({
         )}
 
         {showData && (
-          <TVPlayerClient
-            showId={id}
-            seasons={showData.seasons || []}
-            currentSeason={currentSeason}
-            currentEpisode={currentEpisode}
-            episodes={seasonData?.episodes || []}
-          />
+          <div className="relative z-10">
+            <TVPlayerClient
+              showId={id}
+              seasons={showData.seasons || []}
+              currentSeason={currentSeason}
+              currentEpisode={currentEpisode}
+              episodes={seasonData?.episodes || []}
+            />
+          </div>
         )}
       </div>
     </main>

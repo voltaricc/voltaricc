@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ContinueWatching from '@/components/ContinueWatching';
+import YouMightLike from '@/components/YouMightLike';
 import HeroSlider from '@/components/HeroSlider';
 
 async function fetchTMDB(endpoint: string, apiKey: string) {

@@ -71,8 +71,11 @@ function SearchResults() {
   );
 
   return (
-    <div className="px-6 md:px-10 py-8">
-      <h1 className="text-xl md:text-2xl font-bold text-white mb-6">
+    <div className="max-w-7xl mx-auto px-4 md:px-10 pt-28 pb-12">
+      <h1
+        className="text-xl md:text-2xl font-bold text-white mb-6 tracking-tight"
+        style={{ fontFamily: "'YouTube Sans', sans-serif" }}
+      >
         Search results for: <span className="text-sky-400">&quot;{query}&quot;</span>
       </h1>
 
@@ -93,7 +96,7 @@ function SearchResults() {
               <Link
                 key={`${item.media_type}-${item.id}`}
                 href={isMovie ? `/watch/${item.id}` : `/tv/${item.id}`}
-                className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 transition duration-300"
+                className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02]"
               >
                 <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950 relative">
                   <img
@@ -108,7 +111,7 @@ function SearchResults() {
                   </span>
                 </div>
 
-                <div className="p-2.5">
+                <div className="p-3">
                   <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
                     {title}
                   </h3>
@@ -130,9 +133,9 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-16">
+    <main className="min-h-screen bg-black text-white font-sans pb-36">
       <Header />
-      <Suspense fallback={<div className="p-10 text-neutral-400">Loading search...</div>}>
+      <Suspense fallback={<div className="max-w-7xl mx-auto px-4 md:px-10 pt-32 text-neutral-400 text-sm">Loading search...</div>}>
         <SearchResults />
       </Suspense>
     </main>
