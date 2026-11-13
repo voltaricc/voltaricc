@@ -32,10 +32,10 @@ export default function ContinueWatching() {
   if (!mounted || history.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 md:px-10 space-y-4">
+    <section className="max-w-7xl mx-auto px-4 md:px-12 mt-10 space-y-4">
       <div className="flex items-center justify-between">
         <h2
-          className="text-xl md:text-2xl font-bold tracking-tight text-white"
+          className="text-xl md:text-2xl font-bold tracking-wide text-white"
           style={{ fontFamily: "'YouTube Sans', sans-serif" }}
         >
           Continue Watching
@@ -48,12 +48,12 @@ export default function ContinueWatching() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {history.slice(0, 5).map((item) => (
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth">
+        {history.slice(0, 10).map((item) => (
           <Link
             key={item.storageKey}
             href={resumeHref(item)}
-            className="group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02] flex flex-col"
+            className="flex-none w-[220px] md:w-[260px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-105 flex flex-col"
           >
             <div className="aspect-video w-full bg-neutral-950 relative overflow-hidden">
               {item.posterPath ? (
@@ -74,7 +74,7 @@ export default function ContinueWatching() {
 
               {item.mediaType === 'tv' && (
                 <div className="absolute bottom-3 right-2 px-2 py-0.5 text-[9px] font-bold tracking-wide bg-sky-950/80 backdrop-blur-md rounded-md text-sky-300 border border-sky-500/30 shadow">
-                  S{item.season || 1} • E{item.episode || 1}
+                  S{item.season || 1}E{item.episode || 1}
                 </div>
               )}
 
@@ -87,10 +87,10 @@ export default function ContinueWatching() {
             </div>
 
             <div className="p-3">
-              <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
+              <p className="text-sm font-semibold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
                 {item.title}
               </p>
-              <p className="text-[10px] text-sky-400/90 font-medium mt-1">
+              <p className="text-xs text-sky-400/90 font-medium mt-1">
                 {item.progressPercent ? `${Math.round(item.progressPercent)}% watched` : 'In progress'}
               </p>
             </div>
