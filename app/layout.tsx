@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   title: 'Voltarix - Streaming Platform',
   description: 'High-end streaming platform',
   icons: {
-    icon: '/icon.jpg',
-    shortcut: '/icon.jpg',
-    apple: '/icon.jpg',
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
   },
 };
 
