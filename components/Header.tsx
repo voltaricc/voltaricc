@@ -1,17 +1,54 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getSupabase } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    async function checkUser() {
+      try {
+        const supabase = getSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+          setUser(session?.user ?? null);
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (e) {
+        console.error('Failed to load auth session:', e);
+      }
+    }
+    checkUser();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = getSupabase();
+      await supabase.auth.signOut();
+      setUser(null);
+      setDropdownOpen(false);
+      router.refresh();
+    } catch (e) {
+      console.error('Error signing out:', e);
     }
   };
 
@@ -38,38 +75,69 @@ export default function Header() {
           />
         </form>
 
-        {/* Profile / Avatar */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#F5EFE6] border border-white/20 hover:border-sky-400/80 flex items-center justify-center overflow-hidden shadow-md hover:shadow-sky-500/20 transition-all duration-300">
-            {/* If you save the image to public/profile.png, you can swap this SVG for:
-                <img src="/profile.png" alt="Voltarix Profile" className="w-full h-full object-cover" /> */}
-            <svg viewBox="0 0 100 100" className="w-full h-full" aria-label="Voltarix Profile">
-              <rect width="100" height="100" fill="#F5EFE6" />
-              {/* Back arc of the orbital ring */}
-              <path
-                d="M 27 56 C 14 63, 9 72, 16 76"
-                fill="none"
-                stroke="#0B1320"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
-              {/* Bold V Monogram */}
-              <polygon points="23,28 41,28 50,55 59,28 77,28 50,86" fill="#0B1320" />
-              {/* Front sweeping orbital swoosh */}
-              <path
-                d="M 16 76 C 32 84, 78 65, 90 46 C 95 38, 86 35, 70 39"
-                fill="none"
-                stroke="#0B1320"
-                strokeWidth="4.2"
-                strokeLinecap="round"
-              />
-              {/* Four-point star */}
-              <path
-                d="M 86 14 Q 86 22 94 22 Q 86 22 86 30 Q 86 22 78 22 Q 86 22 86 14 Z"
-                fill="#0B1320"
-              />
-            </svg>
-          </div>
+        {/* Auth / Profile Section */}
+        <div className="flex items-center gap-3 shrink-0 relative">
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#F5EFE6] border border-white/20 hover:border-sky-400/80 flex items-center justify-center overflow-hidden shadow-md hover:shadow-sky-500/20 transition-all duration-300 cursor-pointer"
+                aria-label="User profile menu"
+              >
+                <svg viewBox="0 0 100 100" className="w-full h-full" aria-label="Voltarix Profile">
+                  <rect width="100" height="100" fill="#F5EFE6" />
+                  <path
+                    d="M 27 56 C 14 63, 9 72, 16 76"
+                    fill="none"
+                    stroke="#0B1320"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                  />
+                  <polygon points="23,28 41,28 50,55 59,28 77,28 50,86" fill="#0B1320" />
+                  <path
+                    d="M 16 76 C 32 84, 78 65, 90 46 C 95 38, 86 35, 70 39"
+                    fill="none"
+                    stroke="#0B1320"
+                    strokeWidth="4.2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 86 14 Q 86 22 94 22 Q 86 22 86 30 Q 86 22 78 22 Q 86 22 86 14 Z"
+                    fill="#0B1320"
+                  />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-3 w-48 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl py-2 z-50 text-xs">
+                  <div className="px-4 py-2 border-b border-neutral-800 text-neutral-400 truncate">
+                    {user.email}
+                  </div>
+                  <Link
+                    href="/library"
+                    onClick={() => setDropdownOpen(false)}
+                    className="block px-4 py-2 text-neutral-200 hover:bg-neutral-800 hover:text-white transition"
+                  >
+                    My Library
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-red-400 hover:bg-neutral-800 hover:text-red-300 transition cursor-pointer"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="bg-sky-500 hover:bg-sky-400 text-black font-bold px-4 py-2 rounded-full text-xs transition shadow-md"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </header>
     </div>

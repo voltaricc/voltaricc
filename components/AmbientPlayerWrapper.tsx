@@ -9,9 +9,10 @@ interface AmbientPlayerWrapperProps {
 }
 
 const DEFAULT_PALETTE = [
-  'rgb(56, 189, 248)',  // Sky blue fallback
-  'rgb(14, 165, 233)',
-  'rgb(30, 58, 138)',
+  'rgb(56, 189, 248)',  // Sky blue
+  'rgb(14, 165, 233)',  // Vivid cyan
+  'rgb(99, 102, 241)',  // Indigo
+  'rgb(30, 58, 138)',   // Deep blue
 ];
 
 export default function AmbientPlayerWrapper({
@@ -22,8 +23,9 @@ export default function AmbientPlayerWrapper({
   const [palette, setPalette] = useState<string[]>(DEFAULT_PALETTE);
   const [isPlaying, setIsPlaying] = useState(true);
   const [phase, setPhase] = useState(0);
+  const [pulseBoost, setPulseBoost] = useState(false);
 
-  // 1. Extract dominant colours from the TMDB artwork via a hidden Canvas
+  // 1. Sample an 8x8 grid (64 regions) from the TMDB artwork for a richer palette
   useEffect(() => {
     if (!imagePath) return;
 
@@ -37,38 +39,40 @@ export default function AmbientPlayerWrapper({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Downscale to a 4x4 grid to quickly sample dominant regions
-        canvas.width = 4;
-        canvas.height = 4;
-        ctx.drawImage(img, 0, 0, 4, 4);
+        canvas.width = 8;
+        canvas.height = 8;
+        ctx.drawImage(img, 0, 0, 8, 8);
 
-        const data = ctx.getImageData(0, 0, 4, 4).data;
+        const data = ctx.getImageData(0, 0, 8, 8).data;
         const extracted: string[] = [];
 
-        // Sample 4 distinct quadrants (top-left, top-right, bottom-left, center)
-        const sampleIndices = [0, 3, 12, 10];
-        for (const idx of sampleIndices) {
-          const offset = idx * 4;
-          const r = data[offset];
-          const g = data[offset + 1];
-          const b = data[offset + 2];
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
 
-          // Avoid near-black pixels so the glow stays vibrant
-          if (r + g + b > 60) {
+          const brightness = r + g + b;
+          const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+
+          // Keep vibrant, well-lit tones and skip muddy darks/washed-out whites
+          if (brightness > 90 && brightness < 680 && saturation > 25) {
             extracted.push(`rgb(${r}, ${g}, ${b})`);
           }
         }
 
-        if (extracted.length >= 2) {
-          setPalette(extracted);
+        if (extracted.length >= 3) {
+          // Pick up to 8 evenly spaced colours across the image
+          const step = Math.max(1, Math.floor(extracted.length / 8));
+          const sampled = extracted.filter((_, idx) => idx % step === 0).slice(0, 8);
+          setPalette(sampled);
         }
       } catch {
-        // Fallback smoothly to default sky palette if canvas is tainted
+        // Fallback smoothly to default palette
       }
     };
   }, [imagePath]);
 
-  // 2. Listen for vidy.st / player postMessage events (play/pause) if emitted
+  // 2. Listen for player postMessage events (play, pause, timeupdate) & iframe focus
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -81,55 +85,81 @@ export default function AmbientPlayerWrapper({
         ).toLowerCase();
 
         if (state.includes('play')) setIsPlaying(true);
-        if (state.includes('pause') || state.includes('end')) setIsPlaying(false);
+        if (state.includes('pause') || state.includes('end') || state.includes('buffer')) {
+          setIsPlaying(false);
+        }
+
+        // If the embed emits timeupdate ticks, advance the colour phase immediately
+        if (state.includes('timeupdate') || typeof payload.currentTime === 'number') {
+          setIsPlaying(true);
+          setPhase((prev) => (prev + 1) % palette.length);
+        }
       } catch {
         // Ignore unrelated window messages
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+    // Detect when the user clicks inside the iframe player
+    const handleWindowBlur = () => {
+      if (document.activeElement?.tagName === 'IFRAME') {
+        setIsPlaying(true);
+        setPulseBoost(true);
+        setTimeout(() => setPulseBoost(false), 600);
+      }
+    };
 
-  // 3. Cycle ambient colour shifts gently during active playback
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [palette.length]);
+
+  // 3. High-frequency ambient light cycle (every 1.4s during playback)
   useEffect(() => {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
       setPhase((prev) => (prev + 1) % palette.length);
-    }, 4500);
+    }, 1400);
 
     return () => clearInterval(interval);
   }, [isPlaying, palette.length]);
 
   const primaryColor = palette[phase % palette.length];
-  const secondaryColor = palette[(phase + 1) % palette.length];
-  const tertiaryColor = palette[(phase + 2) % palette.length];
+  const secondaryColor = palette[(phase + 2) % palette.length];
+  const tertiaryColor = palette[(phase + 4) % palette.length];
 
   return (
     <div className="relative">
-      {/* Dynamic Shifting Ambient Light Orbs */}
+      {/* High-Frequency Dynamic Ambient Light Orbs */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none select-none transition-opacity duration-1000 ${
-          isPlaying ? 'opacity-70' : 'opacity-30'
+        className={`pointer-events-none select-none transition-all duration-700 ${
+          isPlaying
+            ? pulseBoost
+              ? 'opacity-95 scale-105'
+              : 'opacity-80 scale-100'
+            : 'opacity-25 scale-95'
         }`}
       >
         {/* Top-Left / Primary Colour Wash */}
         <div
-          className="absolute -top-12 -left-12 w-3/4 h-3/4 rounded-full blur-[110px] saturate-200 transition-colors duration-[4000ms] ease-in-out"
+          className="absolute -top-12 -left-12 w-3/4 h-3/4 rounded-full blur-[100px] saturate-200 transition-colors duration-1000 ease-in-out"
           style={{ backgroundColor: primaryColor }}
         />
 
         {/* Bottom-Right / Secondary Colour Wash */}
         <div
-          className="absolute -bottom-12 -right-12 w-3/4 h-3/4 rounded-full blur-[110px] saturate-200 transition-colors duration-[4000ms] ease-in-out"
+          className="absolute -bottom-12 -right-12 w-3/4 h-3/4 rounded-full blur-[100px] saturate-200 transition-colors duration-1000 ease-in-out"
           style={{ backgroundColor: secondaryColor }}
         />
 
         {/* Centre Atmospheric Halo */}
         <div
-          className="absolute -inset-6 rounded-[2.5rem] blur-[80px] opacity-60 saturate-150 transition-colors duration-[4000ms] ease-in-out"
+          className="absolute -inset-6 rounded-[2.5rem] blur-[75px] opacity-65 saturate-150 transition-colors duration-1000 ease-in-out"
           style={{ backgroundColor: tertiaryColor }}
         />
       </div>
