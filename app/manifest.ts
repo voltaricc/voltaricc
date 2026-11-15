@@ -1,20 +1,25 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Voltaricc Streaming',
-    short_name: 'Voltaricc',
-    description: 'Stream movies and TV series in high definition.',
+    name: 'Voltarix',
+    short_name: 'Voltarix',
+    description: 'High-end streaming platform',
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',
     theme_color: '#000000',
-    orientation: 'portrait',
     icons: [
       {
-        src: '/icon.svg',
+        src: '/icon.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon.png',
         sizes: '512x512',
-        type: 'image/svg+xml',
+        type: 'image/png',
         purpose: 'any',
       },
     ],
