@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import FloatingNav from '@/components/FloatingNav';
+import { WatchlistProvider } from '@/context/WatchlistContext';
 
 export const metadata: Metadata = {
   title: 'Voltarix - Streaming Platform',
@@ -26,8 +27,10 @@ export default function RootLayout({
         <link href="https://fonts.cdnfonts.com/css/youtube-sans" rel="stylesheet" />
       </head>
       <body className="bg-black text-white antialiased min-h-screen pb-24">
-        {children}
-        <FloatingNav />
+        <WatchlistProvider>
+          {children}
+          <FloatingNav />
+        </WatchlistProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import ContinueWatching from '@/components/ContinueWatching';
 import YouMightLike from '@/components/YouMightLike';
 import HeroSlider from '@/components/HeroSlider';
+import PosterCard from '@/components/PosterCard';
 
 async function fetchTMDB(endpoint: string, apiKey: string) {
   if (!apiKey) return { results: [] };
@@ -97,32 +98,32 @@ export default async function HomePage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-12 space-y-12 mt-10">
         {trendingMovies.results?.length > 0 && (
-          <MediaRow title="Trending Movies" items={trendingMovies.results} mediaType="movie" />
+          <HomeMediaRow title="Trending Movies" items={trendingMovies.results} mediaType="movie" />
         )}
         {trendingTV.results?.length > 0 && (
-          <MediaRow title="Trending TV Shows" items={trendingTV.results} mediaType="tv" />
+          <HomeMediaRow title="Trending TV Shows" items={trendingTV.results} mediaType="tv" />
         )}
         {actionMovies.results?.length > 0 && (
-          <MediaRow title="Action & Adventure" items={actionMovies.results} mediaType="movie" />
+          <HomeMediaRow title="Action & Adventure" items={actionMovies.results} mediaType="movie" />
         )}
         {scifiTV.results?.length > 0 && (
-          <MediaRow title="Sci-Fi & Fantasy" items={scifiTV.results} mediaType="tv" />
+          <HomeMediaRow title="Sci-Fi & Fantasy" items={scifiTV.results} mediaType="tv" />
         )}
         {animation.results?.length > 0 && (
-          <MediaRow title="Animation" items={animation.results} mediaType="movie" />
+          <HomeMediaRow title="Animation" items={animation.results} mediaType="movie" />
         )}
         {comedyMovies.results?.length > 0 && (
-          <MediaRow title="Comedies" items={comedyMovies.results} mediaType="movie" />
+          <HomeMediaRow title="Comedies" items={comedyMovies.results} mediaType="movie" />
         )}
         {horrorMovies.results?.length > 0 && (
-          <MediaRow title="Horror & Thrillers" items={horrorMovies.results} mediaType="movie" />
+          <HomeMediaRow title="Horror & Thrillers" items={horrorMovies.results} mediaType="movie" />
         )}
       </div>
     </main>
   );
 }
 
-function MediaRow({ title, items, mediaType }: { title: string; items: any[]; mediaType: 'movie' | 'tv' }) {
+function HomeMediaRow({ title, items, mediaType }: { title: string; items: any[]; mediaType: 'movie' | 'tv' }) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -130,42 +131,23 @@ function MediaRow({ title, items, mediaType }: { title: string; items: any[]; me
       <h2 className="text-xl md:text-2xl font-bold tracking-wide text-white">{title}</h2>
       <div className="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth">
         {items.map((item) => {
-          const posterPath = item.poster_path
-            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-            : '/placeholder.png';
-          const name = item.title || item.name;
-          const resolvedMediaType = item.media_type || mediaType;
+          const name = item.title || item.name || 'Untitled';
+          const resolvedMediaType: 'movie' | 'tv' = item.media_type === 'tv' || item.media_type === 'movie' ? item.media_type : mediaType;
           const linkHref = resolvedMediaType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}`;
+          const releaseYear = item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
 
           return (
-            <Link
-              key={item.id}
+            <PosterCard
+              key={`${resolvedMediaType}-${item.id}`}
               href={linkHref}
-              className="flex-none w-[180px] md:w-[220px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-105"
-            >
-              <div className="relative aspect-[2/3] w-full overflow-hidden">
-                <img
-                  src={posterPath}
-                  alt={name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-                
-                <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
-                  {resolvedMediaType === 'movie' ? 'Movie' : 'TV Show'}
-                </span>
-              </div>
-
-              <div className="p-3">
-                <h3 className="text-sm font-semibold text-white truncate group-hover:text-sky-400 transition-colors">
-                  {name}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-neutral-400 mt-1">
-                  <span className="text-sky-400/90 font-medium">★ {item.vote_average?.toFixed(1) || 'N/A'}</span>
-                  <span>{item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || ''}</span>
-                </div>
-              </div>
-            </Link>
+              mediaId={item.id}
+              mediaType={resolvedMediaType}
+              title={name}
+              posterPath={item.poster_path}
+              rating={item.vote_average}
+              subtitle={releaseYear}
+              className="flex-none w-[180px] md:w-[220px]"
+            />
           );
         })}
       </div>

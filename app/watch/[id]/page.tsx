@@ -2,6 +2,7 @@ import Header from '@/components/Header';
 import WatchTracker from '@/components/WatchTracker';
 import WatchlistButton from '@/components/WatchlistButton';
 import AmbientPlayerWrapper from '@/components/AmbientPlayerWrapper';
+import CastRow from '@/components/CastRow';
 
 export default async function MovieWatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,9 +11,12 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
   let movieData: any = null;
   if (apiKey) {
     try {
-      const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}`, {
-        next: { revalidate: 86400 },
-      });
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}&append_to_response=credits`,
+        {
+          next: { revalidate: 86400 },
+        }
+      );
       movieData = await res.json();
     } catch (e) {
       console.error('Failed to fetch movie details:', e);
@@ -79,6 +83,9 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
                 voteAverage={movieData.vote_average}
               />
             </div>
+
+            {/* Top 10 Main Cast */}
+            <CastRow cast={movieData.credits?.cast || []} limit={10} />
           </div>
         )}
       </div>

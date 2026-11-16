@@ -2,6 +2,8 @@ import Header from '@/components/Header';
 import TVPlayerClient from '@/components/TVPlayerClient';
 import WatchTracker from '@/components/WatchTracker';
 import WatchlistButton from '@/components/WatchlistButton';
+import CastRow from '@/components/CastRow';
+import AmbientPlayerWrapper from '@/components/AmbientPlayerWrapper';
 
 export default async function TVShowPage({
   params,
@@ -25,9 +27,12 @@ export default async function TVShowPage({
 
   if (apiKey) {
     try {
-      const showRes = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}`, {
-        next: { revalidate: 3600 },
-      });
+      const showRes = await fetch(
+        `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits`,
+        {
+          next: { revalidate: 3600 },
+        }
+      );
       showData = await showRes.json();
 
       const seasonRes = await fetch(
@@ -86,36 +91,12 @@ export default async function TVShowPage({
       )}
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
-        {/* Enhanced Cinema Ambient Glow Player Wrapper */}
-        <div className="relative">
-          {(showData?.backdrop_path || showData?.poster_path) && (
-            <>
-              {/* Wide atmospheric ambient halo */}
-              <img
-                src={`https://image.tmdb.org/t/p/w780${showData.backdrop_path || showData.poster_path}`}
-                alt=""
-                aria-hidden="true"
-                className="absolute -inset-12 w-[calc(100%+6rem)] h-[calc(100%+6rem)] object-cover rounded-[3rem] blur-[100px] opacity-45 saturate-200 pointer-events-none select-none transition-opacity duration-700"
-              />
-              {/* Tighter inner edge glow */}
-              <img
-                src={`https://image.tmdb.org/t/p/w780${showData.backdrop_path || showData.poster_path}`}
-                alt=""
-                aria-hidden="true"
-                className="absolute -inset-4 w-[calc(100%+2rem)] h-[calc(100%+2rem)] object-cover rounded-3xl blur-3xl opacity-50 saturate-150 pointer-events-none select-none transition-opacity duration-700"
-              />
-            </>
-          )}
-          <div className="relative w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-white/15 shadow-2xl">
-            <iframe
-              src={embedUrl}
-              className="w-full h-full border-0"
-              allowFullScreen
-              allow="encrypted-media; autoplay *; fullscreen *"
-              title={showData?.name || 'TV Show Player'}
-            />
-          </div>
-        </div>
+        {/* Dynamic Ambient Glow Player (Synced with Movie Watch Page) */}
+        <AmbientPlayerWrapper
+          embedUrl={embedUrl}
+          title={showData?.name || 'TV Show Player'}
+          imagePath={activeEpisodeObj?.still_path || showData?.backdrop_path || showData?.poster_path}
+        />
 
         {showData && (
           <div className="space-y-4 relative z-10">
@@ -150,6 +131,13 @@ export default async function TVShowPage({
               currentEpisode={currentEpisode}
               episodes={seasonData?.episodes || []}
             />
+          </div>
+        )}
+
+        {/* Top 10 Main Cast */}
+        {showData && (
+          <div className="relative z-10">
+            <CastRow cast={showData.credits?.cast || []} limit={10} />
           </div>
         )}
       </div>
