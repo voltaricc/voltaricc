@@ -93,9 +93,13 @@ export default async function TVShowPage({
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
         {/* Dynamic Ambient Glow Player (Synced with Movie Watch Page) */}
         <AmbientPlayerWrapper
-          embedUrl={embedUrl}
-          title={showData?.name || 'TV Show Player'}
-          imagePath={activeEpisodeObj?.still_path || showData?.backdrop_path || showData?.poster_path}
+        embedUrl={embedUrl}
+        title={showData?.name || 'TV Show Player'}
+        imagePath={activeEpisodeObj?.still_path || showData?.backdrop_path || showData?.poster_path}
+        mediaId={id}
+        mediaType="tv"
+        season={seasonNumber}
+        episode={episodeNumber}
         />
 
         {showData && (

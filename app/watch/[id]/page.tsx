@@ -62,9 +62,11 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
         <AmbientPlayerWrapper
-          embedUrl={embedUrl}
-          title={movieData?.title || 'Movie Player'}
-          imagePath={movieData?.backdrop_path || movieData?.poster_path}
+        embedUrl={embedUrl}
+        title={movieData?.title || 'Movie Player'}
+        imagePath={movieData?.backdrop_path || movieData?.poster_path}
+        mediaId={id}
+        mediaType="movie"
         />
 
         {movieData && (
