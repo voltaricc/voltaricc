@@ -15,6 +15,10 @@ const DEFAULT_PALETTE = [
   'rgb(37, 99, 235)',   // Royal blue
 ];
 
+function toRgba(rgb: string, alpha: number): string {
+  return rgb.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+}
+
 export default function AmbientPlayerWrapper({
   embedUrl,
   title,
@@ -27,6 +31,7 @@ export default function AmbientPlayerWrapper({
 
   const isHoveringPlayerRef = useRef(false);
   const receivedPostMessageRef = useRef(false);
+  const lastPhaseTickRef = useRef(0);
 
   // 1. Sample an 8x8 grid from the TMDB artwork for an authentic colour palette
   useEffect(() => {
@@ -39,7 +44,7 @@ export default function AmbientPlayerWrapper({
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
         canvas.width = 8;
@@ -57,7 +62,6 @@ export default function AmbientPlayerWrapper({
           const brightness = r + g + b;
           const saturation = Math.max(r, g, b) - Math.min(r, g, b);
 
-          // Keep vibrant, well-lit tones and skip muddy darks/washed-out whites
           if (brightness > 85 && brightness < 690 && saturation > 22) {
             extracted.push(`rgb(${r}, ${g}, ${b})`);
           }
@@ -81,7 +85,7 @@ export default function AmbientPlayerWrapper({
     receivedPostMessageRef.current = false;
   }, [embedUrl]);
 
-  // 2. Sync with embed postMessage events & smart iframe click/focus detection
+  // 2. Throttled sync with embed postMessage events & iframe click detection
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -89,14 +93,14 @@ export default function AmbientPlayerWrapper({
           typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (!raw || typeof raw !== 'object') return;
 
-        // Inspect top-level and nested player payloads (Player.js, Vidstack, JW, etc.)
         const eventName = String(
           raw.event || raw.type || raw.state || raw.action || raw.data?.event || ''
         ).toLowerCase();
 
-        if (!eventName && typeof raw.currentTime !== 'number' && typeof raw.data?.currentTime !== 'number') {
-          return;
-        }
+        const hasTime =
+          typeof raw.currentTime === 'number' || typeof raw.data?.currentTime === 'number';
+
+        if (!eventName && !hasTime) return;
 
         receivedPostMessageRef.current = true;
 
@@ -118,23 +122,20 @@ export default function AmbientPlayerWrapper({
           setIsPlaying(false);
         }
 
-        // Advance colour phase on playback timeupdate ticks
-        if (
-          eventName.includes('timeupdate') ||
-          eventName.includes('progress') ||
-          typeof raw.currentTime === 'number' ||
-          typeof raw.data?.currentTime === 'number'
-        ) {
-          setIsPlaying(true);
-          setPhase((prev) => (prev + 1) % palette.length);
+        // Throttle timeupdate ticks to once every 2.2s so video decoding never stutters
+        if (eventName.includes('timeupdate') || eventName.includes('progress') || hasTime) {
+          const now = Date.now();
+          if (now - lastPhaseTickRef.current >= 2200) {
+            lastPhaseTickRef.current = now;
+            setIsPlaying(true);
+            setPhase((prev) => (prev + 1) % palette.length);
+          }
         }
       } catch {
-        // Ignore non-JSON messages from browser extensions
+        // Ignore unrelated messages
       }
     };
 
-    // Fallback sync: when the user clicks inside the cross-origin iframe, window blurs.
-    // Re-focusing the parent window immediately after lets us detect subsequent play/pause clicks!
     const handleWindowBlur = () => {
       if (
         !receivedPostMessageRef.current &&
@@ -144,7 +145,6 @@ export default function AmbientPlayerWrapper({
         setPulseBoost(true);
         setTimeout(() => setPulseBoost(false), 550);
 
-        // Return focus shortly after so the next click inside the iframe also triggers blur
         setTimeout(() => {
           if (document.activeElement?.tagName === 'IFRAME') {
             window.focus();
@@ -162,20 +162,23 @@ export default function AmbientPlayerWrapper({
     };
   }, [palette.length]);
 
-  // 3. Smooth dynamic colour cycle while playing (every 1.2s)
+  // 3. Gentle 2.4s colour cycle while playing (low CPU/GPU overhead)
   useEffect(() => {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
-      setPhase((prev) => (prev + 1) % palette.length);
-    }, 1200);
+      const now = Date.now();
+      if (now - lastPhaseTickRef.current >= 2000) {
+        lastPhaseTickRef.current = now;
+        setPhase((prev) => (prev + 1) % palette.length);
+      }
+    }, 2400);
 
     return () => clearInterval(interval);
   }, [isPlaying, palette.length]);
 
   const primaryColor = palette[phase % palette.length];
   const secondaryColor = palette[(phase + 2) % palette.length];
-  const tertiaryColor = palette[(phase + 4) % palette.length];
 
   return (
     <div
@@ -187,44 +190,43 @@ export default function AmbientPlayerWrapper({
         isHoveringPlayerRef.current = false;
       }}
     >
-      {/* Enhanced Dynamic Ambient Light Orbs */}
+      {/* Hardware-Accelerated Radial Ambient Glow (Zero heavy blur filter lag) */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none select-none transition-all duration-700 ${
+        style={{
+          transform: 'translate3d(0, 0, 0)',
+          willChange: 'opacity, transform',
+          background: `
+            radial-gradient(circle at 22% 28%, ${toRgba(primaryColor, 0.55)} 0%, transparent 62%),
+            radial-gradient(circle at 78% 72%, ${toRgba(secondaryColor, 0.52)} 0%, transparent 62%)
+          `,
+        }}
+        className={`pointer-events-none select-none absolute -inset-12 md:-inset-16 rounded-[3rem] transition-all duration-1000 ease-out ${
           isPlaying
             ? pulseBoost
-              ? 'opacity-100 scale-[1.04]'
-              : 'opacity-95 scale-100'
-            : 'opacity-30 scale-[0.97]'
+              ? 'opacity-100 scale-[1.03]'
+              : 'opacity-90 scale-100'
+            : 'opacity-25 scale-[0.98]'
         }`}
+      />
+
+      {/* Crisp Inner Bezel Rim Glow (Lightweight 24px blur on GPU layer) */}
+      <div
+        aria-hidden="true"
+        style={{
+          transform: 'translate3d(0, 0, 0)',
+          backgroundColor: toRgba(primaryColor, 0.42),
+        }}
+        className={`pointer-events-none select-none absolute -inset-1.5 rounded-3xl blur-xl transition-colors duration-1000 ease-out ${
+          isPlaying ? 'opacity-90' : 'opacity-20'
+        }`}
+      />
+
+      {/* Main Video Player Frame (Isolated GPU Compositing Layer) */}
+      <div
+        style={{ transform: 'translate3d(0, 0, 0)' }}
+        className="relative w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-white/20 shadow-2xl"
       >
-        {/* Top-Left / Primary Colour Wash */}
-        <div
-          className="absolute -top-14 -left-14 w-3/4 h-3/4 rounded-full blur-[105px] saturate-[2.4] transition-colors duration-1000 ease-in-out"
-          style={{ backgroundColor: primaryColor }}
-        />
-
-        {/* Bottom-Right / Secondary Colour Wash */}
-        <div
-          className="absolute -bottom-14 -right-14 w-3/4 h-3/4 rounded-full blur-[105px] saturate-[2.4] transition-colors duration-1000 ease-in-out"
-          style={{ backgroundColor: secondaryColor }}
-        />
-
-        {/* Mid Atmospheric Halo */}
-        <div
-          className="absolute -inset-8 rounded-[2.5rem] blur-[80px] opacity-80 saturate-200 transition-colors duration-1000 ease-in-out"
-          style={{ backgroundColor: tertiaryColor }}
-        />
-
-        {/* Crisp Inner Bezel Rim Glow (Boosts perceived intensity right around the video) */}
-        <div
-          className="absolute -inset-2 rounded-3xl blur-2xl opacity-75 saturate-[2.5] transition-colors duration-1000 ease-in-out"
-          style={{ backgroundColor: primaryColor }}
-        />
-      </div>
-
-      {/* Main Video Player Frame */}
-      <div className="relative w-full aspect-video bg-neutral-950 rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
         <iframe
           src={embedUrl}
           className="w-full h-full border-0"
