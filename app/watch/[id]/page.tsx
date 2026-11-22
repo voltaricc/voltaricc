@@ -4,6 +4,23 @@ import WatchlistButton from '@/components/WatchlistButton';
 import AmbientPlayerWrapper from '@/components/AmbientPlayerWrapper';
 import CastRow from '@/components/CastRow';
 
+function getMovieCertification(movieData: any): string | null {
+  const results = movieData?.release_dates?.results;
+  if (!Array.isArray(results)) return null;
+
+  for (const countryCode of ['GB', 'US']) {
+    const countryEntry = results.find((r: any) => r.iso_3166_1 === countryCode);
+    const certifiedRelease = countryEntry?.release_dates?.find(
+      (d: any) => d.certification && d.certification.trim() !== ''
+    );
+    if (certifiedRelease?.certification) {
+      return certifiedRelease.certification.trim();
+    }
+  }
+
+  return null;
+}
+
 export default async function MovieWatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
@@ -12,7 +29,7 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
   if (apiKey) {
     try {
       const res = await fetch(
-        `https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}&append_to_response=credits`,
+        `https://api.themoviedb.org/3/movie/${id}?api_key=${apiKey}&append_to_response=credits,release_dates`,
         {
           next: { revalidate: 86400 },
         }
@@ -23,6 +40,7 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
     }
   }
 
+  const ageRating = getMovieCertification(movieData);
   const embedUrl = `https://vidy.st/movie/${id}?color=38BDF8`;
 
   return (
@@ -62,21 +80,33 @@ export default async function MovieWatchPage({ params }: { params: Promise<{ id:
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
         <AmbientPlayerWrapper
-        embedUrl={embedUrl}
-        title={movieData?.title || 'Movie Player'}
-        imagePath={movieData?.backdrop_path || movieData?.poster_path}
-        mediaId={id}
-        mediaType="movie"
+          embedUrl={embedUrl}
+          title={movieData?.title || 'Movie Player'}
+          imagePath={movieData?.backdrop_path || movieData?.poster_path}
+          mediaId={id}
+          mediaType="movie"
         />
 
         {movieData && (
           <div className="space-y-4 relative z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
-                <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
-                <span>{movieData.release_date?.split('-')[0]}</span>
-                <span>{movieData.runtime} mins</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
+                  <span className="text-sky-400 font-bold">★ {movieData.vote_average?.toFixed(1)}</span>
+                  <span>{movieData.release_date?.split('-')[0]}</span>
+                  <span>{movieData.runtime} mins</span>
+                </div>
+
+                {/* Age / PG Rating Pill (UK primary, US fallback) */}
+                {ageRating && (
+                  <div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-neutral-900/90 text-neutral-200 border border-white/15 shadow-sm">
+                      {ageRating}
+                    </span>
+                  </div>
+                )}
               </div>
+
               <WatchlistButton
                 mediaId={id}
                 mediaType="movie"

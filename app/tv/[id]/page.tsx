@@ -5,6 +5,20 @@ import WatchlistButton from '@/components/WatchlistButton';
 import CastRow from '@/components/CastRow';
 import AmbientPlayerWrapper from '@/components/AmbientPlayerWrapper';
 
+function getTVCertification(showData: any): string | null {
+  const results = showData?.content_ratings?.results;
+  if (!Array.isArray(results)) return null;
+
+  for (const countryCode of ['GB', 'US']) {
+    const countryEntry = results.find((r: any) => r.iso_3166_1 === countryCode);
+    if (countryEntry?.rating && countryEntry.rating.trim() !== '') {
+      return countryEntry.rating.trim();
+    }
+  }
+
+  return null;
+}
+
 export default async function TVShowPage({
   params,
   searchParams,
@@ -28,7 +42,7 @@ export default async function TVShowPage({
   if (apiKey) {
     try {
       const showRes = await fetch(
-        `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits`,
+        `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits,content_ratings`,
         {
           next: { revalidate: 3600 },
         }
@@ -51,6 +65,7 @@ export default async function TVShowPage({
   const episodeRuntime =
     activeEpisodeObj?.runtime || showData?.episode_run_time?.[0] || 45;
 
+  const ageRating = getTVCertification(showData);
   const embedUrl = `https://vidy.st/tv/${id}/${currentSeason}/${currentEpisode}?episodeSelector=true&nextEpisode=true&autoplayNextEpisode=true&color=38BDF8`;
 
   return (
@@ -91,30 +106,41 @@ export default async function TVShowPage({
       )}
 
       <div className="max-w-7xl mx-auto px-4 md:px-10 pt-6 space-y-6">
-        {/* Dynamic Ambient Glow Player (Synced with Movie Watch Page) */}
         <AmbientPlayerWrapper
-        embedUrl={embedUrl}
-        title={showData?.name || 'TV Show Player'}
-        imagePath={activeEpisodeObj?.still_path || showData?.backdrop_path || showData?.poster_path}
-        mediaId={id}
-        mediaType="tv"
-        season={seasonNumber}
-        episode={episodeNumber}
+          embedUrl={embedUrl}
+          title={showData?.name || 'TV Show Player'}
+          imagePath={activeEpisodeObj?.still_path || showData?.backdrop_path || showData?.poster_path}
+          mediaId={id}
+          mediaType="tv"
+          season={seasonNumber}
+          episode={episodeNumber}
         />
 
         {showData && (
           <div className="space-y-4 relative z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
-                <span className="text-sky-400 font-bold">★ {showData.vote_average?.toFixed(1)}</span>
-                <span>{showData.first_air_date?.split('-')[0]}</span>
-                {showData.number_of_seasons && (
-                  <span>
-                    {showData.number_of_seasons}{' '}
-                    {showData.number_of_seasons === 1 ? 'Season' : 'Seasons'}
-                  </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-xs md:text-sm text-neutral-400">
+                  <span className="text-sky-400 font-bold">★ {showData.vote_average?.toFixed(1)}</span>
+                  <span>{showData.first_air_date?.split('-')[0]}</span>
+                  {showData.number_of_seasons && (
+                    <span>
+                      {showData.number_of_seasons}{' '}
+                      {showData.number_of_seasons === 1 ? 'Season' : 'Seasons'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Age / PG Rating Pill (UK primary, US fallback) */}
+                {ageRating && (
+                  <div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-neutral-900/90 text-neutral-200 border border-white/15 shadow-sm">
+                      {ageRating}
+                    </span>
+                  </div>
                 )}
               </div>
+
               <WatchlistButton
                 mediaId={id}
                 mediaType="tv"

@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
-import Link from 'next/link';
+import PosterCard from '@/components/PosterCard';
 
 type SearchItem = {
   id: number;
@@ -71,11 +71,8 @@ function SearchResults() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-10 pt-28 pb-12">
-      <h1
-        className="text-xl md:text-2xl font-bold text-white mb-6 tracking-tight"
-        style={{ fontFamily: "'YouTube Sans', sans-serif" }}
-      >
+    <div className="px-6 md:px-10 py-8">
+      <h1 className="text-xl md:text-2xl font-bold text-white mb-6">
         Search results for: <span className="text-sky-400">&quot;{query}&quot;</span>
       </h1>
 
@@ -88,41 +85,22 @@ function SearchResults() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {shown.map((item) => {
-            const isMovie = item.media_type === 'movie';
+            const resolvedType: 'movie' | 'tv' =
+              item.media_type === 'tv' ? 'tv' : 'movie';
             const title = item.title || item.name || 'Untitled';
             const date = item.release_date || item.first_air_date;
 
             return (
-              <Link
-                key={`${item.media_type}-${item.id}`}
-                href={isMovie ? `/watch/${item.id}` : `/tv/${item.id}`}
-                className="group relative bg-neutral-900/60 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02]"
-              >
-                <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-950 relative">
-                  <img
-                    src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
-                    alt={title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-
-                  {/* Movie / TV Show Badge Tag */}
-                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow z-10">
-                    {isMovie ? 'Movie' : 'TV Show'}
-                  </span>
-                </div>
-
-                <div className="p-3">
-                  <h3 className="font-semibold text-xs truncate text-neutral-100 group-hover:text-sky-400 transition">
-                    {title}
-                  </h3>
-                  <div className="flex items-center justify-between mt-1 text-[10px] text-neutral-400">
-                    <span>{date?.slice(0, 4)}</span>
-                    <span className="text-sky-400 font-semibold">
-                      ★ {item.vote_average?.toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
+              <PosterCard
+                key={`${resolvedType}-${item.id}`}
+                href={resolvedType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}`}
+                mediaId={item.id}
+                mediaType={resolvedType}
+                title={title}
+                posterPath={item.poster_path}
+                rating={item.vote_average}
+                subtitle={date?.slice(0, 4)}
+              />
             );
           })}
         </div>
@@ -133,9 +111,9 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-36">
+    <main className="min-h-screen bg-black text-white font-sans pb-16">
       <Header />
-      <Suspense fallback={<div className="max-w-7xl mx-auto px-4 md:px-10 pt-32 text-neutral-400 text-sm">Loading search...</div>}>
+      <Suspense fallback={<div className="p-10 text-neutral-400">Loading search...</div>}>
         <SearchResults />
       </Suspense>
     </main>

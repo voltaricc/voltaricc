@@ -58,7 +58,6 @@ export default function AmbientPlayerWrapper({
         mediaType === 'movie' ||
         (saved?.season === season && saved?.episode === episode);
 
-      // Resume if saved time is > 15s and < 95% complete
       if (
         saved &&
         matchesEpisode &&
@@ -153,7 +152,6 @@ export default function AmbientPlayerWrapper({
           case 'timeupdate': {
             setIsPlaying(true);
             const now = Date.now();
-            // Throttle colour shifts to once every 2.2s for 60fps video decoding
             if (now - lastPhaseTickRef.current >= 2200) {
               lastPhaseTickRef.current = now;
               setPhase((prev) => (prev + 1) % palette.length);
@@ -175,18 +173,18 @@ export default function AmbientPlayerWrapper({
 
   return (
     <div className="relative">
-      {/* Hardware-Accelerated Radial Ambient Glow */}
+      {/* Seamless Edge-Free Radial Ambient Glow (Fades 100% to transparent before container edges) */}
       <div
         aria-hidden="true"
         style={{
           transform: 'translate3d(0, 0, 0)',
           willChange: 'opacity, transform',
           background: `
-            radial-gradient(circle at 22% 28%, ${toRgba(primaryColor, 0.58)} 0%, transparent 62%),
-            radial-gradient(circle at 78% 72%, ${toRgba(secondaryColor, 0.55)} 0%, transparent 62%)
+            radial-gradient(ellipse 46% 44% at 30% 36%, ${toRgba(primaryColor, 0.55)} 0%, ${toRgba(primaryColor, 0.18)} 42%, transparent 70%),
+            radial-gradient(ellipse 46% 44% at 70% 64%, ${toRgba(secondaryColor, 0.52)} 0%, ${toRgba(secondaryColor, 0.16)} 42%, transparent 70%)
           `,
         }}
-        className={`pointer-events-none select-none absolute -inset-12 md:-inset-16 rounded-[3rem] transition-all duration-1000 ease-out ${
+        className={`pointer-events-none select-none absolute -inset-20 md:-inset-28 transition-all duration-1000 ease-out ${
           isPlaying
             ? pulseBoost
               ? 'opacity-100 scale-[1.03]'
