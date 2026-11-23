@@ -15,17 +15,30 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?api_key=${apiKey}&language=en-US&page=1`,
+    const recRes = await fetch(
+      `https://api.themoviedb.org/3/${mediaType}/${id}/recommendations?api_key=${apiKey}&language=en-GB&page=1`,
       { next: { revalidate: 3600 } }
     );
 
-    if (!res.ok) {
+    if (recRes.ok) {
+      const recData = await recRes.json();
+      if (Array.isArray(recData.results) && recData.results.length > 0) {
+        return NextResponse.json({ results: recData.results });
+      }
+    }
+
+    // Fallback to TMDB /similar endpoint if /recommendations returns no results
+    const simRes = await fetch(
+      `https://api.themoviedb.org/3/${mediaType}/${id}/similar?api_key=${apiKey}&language=en-GB&page=1`,
+      { next: { revalidate: 3600 } }
+    );
+
+    if (!simRes.ok) {
       return NextResponse.json({ results: [] });
     }
 
-    const data = await res.json();
-    return NextResponse.json({ results: data.results || [] });
+    const simData = await simRes.json();
+    return NextResponse.json({ results: simData.results || [] });
   } catch (error) {
     console.error('Recommendations fetch error:', error);
     return NextResponse.json({ results: [] });

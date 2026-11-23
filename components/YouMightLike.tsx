@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import PosterCard from '@/components/PosterCard';
 import { getSortedHistory, HISTORY_EVENT, makeKey } from '@/lib/watchHistory';
 
 type RecommendedItem = {
@@ -29,13 +29,13 @@ export default function YouMightLike() {
         return;
       }
 
-      // Track everything already watched so we don't recommend it again
+      // Exclude anything already in watch history so suggestions feel fresh
       const watchedKeys = new Set(
         history.map((entry) => makeKey(entry.mediaType, entry.id))
       );
 
-      // Use the top 3 most recently watched titles as seeds
-      const seeds = history.slice(0, 3);
+      // Use up to 4 most recently watched titles as seeds
+      const seeds = history.slice(0, 4);
 
       try {
         const responses = await Promise.all(
@@ -52,7 +52,6 @@ export default function YouMightLike() {
           })
         );
 
-        // Flatten, filter out already-watched & posterless items, and deduplicate
         const seen = new Set<string>();
         const merged: RecommendedItem[] = [];
 
@@ -70,7 +69,7 @@ export default function YouMightLike() {
           }
         }
 
-        // Light shuffle so recommendations feel fresh across seeds, capped at 15 items
+        // Light shuffle and cap at 15 items to keep the row fast and varied
         const shuffled = merged.sort(() => Math.random() - 0.5).slice(0, 15);
         setRecommendations(shuffled);
       } catch (err) {
@@ -80,7 +79,11 @@ export default function YouMightLike() {
 
     loadRecommendations();
     window.addEventListener(HISTORY_EVENT, loadRecommendations);
-    return () => window.removeEventListener(HISTORY_EVENT, loadRecommendations);
+    window.addEventListener('storage', loadRecommendations);
+    return () => {
+      window.removeEventListener(HISTORY_EVENT, loadRecommendations);
+      window.removeEventListener('storage', loadRecommendations);
+    };
   }, []);
 
   if (!mounted || recommendations.length === 0) return null;
@@ -95,45 +98,26 @@ export default function YouMightLike() {
       </h2>
       <div className="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth">
         {recommendations.map((item) => {
-          const posterPath = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
           const name = item.title || item.name || 'Untitled';
-          const resolvedMediaType = item.media_type || 'movie';
+          const resolvedMediaType: 'movie' | 'tv' =
+            item.media_type === 'tv' ? 'tv' : 'movie';
           const linkHref =
             resolvedMediaType === 'movie' ? `/watch/${item.id}` : `/tv/${item.id}`;
+          const releaseYear =
+            item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
 
           return (
-            <Link
+            <PosterCard
               key={`${resolvedMediaType}-${item.id}`}
               href={linkHref}
-              className="flex-none w-[180px] md:w-[220px] group relative bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800/80 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-105"
-            >
-              <div className="relative aspect-[2/3] w-full overflow-hidden">
-                <img
-                  src={posterPath}
-                  alt={name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-
-                <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
-                  {resolvedMediaType === 'movie' ? 'Movie' : 'TV Show'}
-                </span>
-              </div>
-
-              <div className="p-3">
-                <h3 className="text-sm font-semibold text-white truncate group-hover:text-sky-400 transition-colors">
-                  {name}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-neutral-400 mt-1">
-                  <span className="text-sky-400/90 font-medium">
-                    ★ {item.vote_average?.toFixed(1) || 'N/A'}
-                  </span>
-                  <span>
-                    {item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || ''}
-                  </span>
-                </div>
-              </div>
-            </Link>
+              mediaId={item.id}
+              mediaType={resolvedMediaType}
+              title={name}
+              posterPath={item.poster_path || null}
+              rating={item.vote_average}
+              subtitle={releaseYear}
+              className="flex-none w-[180px] md:w-[220px]"
+            />
           );
         })}
       </div>

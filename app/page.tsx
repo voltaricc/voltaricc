@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import Header from '@/components/Header';
 import ContinueWatching from '@/components/ContinueWatching';
 import YouMightLike from '@/components/YouMightLike';
@@ -95,6 +94,7 @@ export default async function HomePage() {
       <Header />
       <HeroSlider items={heroItems} />
       <ContinueWatching />
+      <YouMightLike />
 
       <div className="max-w-7xl mx-auto px-4 md:px-12 space-y-12 mt-10">
         {trendingMovies.results?.length > 0 && (
