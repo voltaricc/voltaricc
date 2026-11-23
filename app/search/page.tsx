@@ -111,7 +111,7 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-black text-white font-sans pb-16">
+    <main className="min-h-screen bg-black text-white font-sans pt-28 md:pt-32 pb-24">
       <Header />
       <Suspense fallback={<div className="p-10 text-neutral-400">Loading search...</div>}>
         <SearchResults />

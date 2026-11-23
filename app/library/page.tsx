@@ -27,7 +27,7 @@ export default function LibraryPage() {
         } = await supabase.auth.getUser();
 
         if (user) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('watchlist')
             .select('id, media_id, media_type, title, poster_path, vote_average')
             .eq('user_id', user.id)
@@ -48,17 +48,12 @@ export default function LibraryPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-black text-white pt-28 pb-40">
+    <main className="min-h-screen bg-black text-white pt-28 md:pt-32 pb-40">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-10 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-10 pt-8 space-y-6">
         <div>
-          <h1
-            className="text-2xl md:text-3xl font-bold tracking-tight text-white"
-            style={{ fontFamily: "'YouTube Sans', sans-serif" }}
-          >
-            My Library
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">My Library</h1>
           <p className="text-xs md:text-sm text-neutral-400 mt-1">
             Your saved movies and TV shows.
           </p>
@@ -71,7 +66,7 @@ export default function LibraryPage() {
             <p className="text-neutral-400 text-sm">Your list is empty. Add titles from any movie or show page!</p>
             <Link
               href="/"
-              className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-sky-400 hover:text-white hover:shadow-lg hover:shadow-sky-500/20 transition-all duration-300"
+              className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-neutral-200 transition"
             >
               Explore Movies & TV Shows
             </Link>
@@ -86,7 +81,7 @@ export default function LibraryPage() {
                     ? `/watch/${item.media_id}`
                     : `/tv/${item.media_id}?season=1&episode=1`
                 }
-                className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 transition-all duration-300 hover:scale-[1.02] flex flex-col"
+                className="group bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.02] shadow-lg flex flex-col"
               >
                 <div className="aspect-[2/3] w-full bg-neutral-950 relative overflow-hidden">
                   {item.poster_path ? (
@@ -100,16 +95,10 @@ export default function LibraryPage() {
                       {item.title}
                     </div>
                   )}
-
-                  <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-black/70 backdrop-blur-md rounded-md text-white border border-white/15 shadow">
-                    {item.media_type === 'movie' ? 'Movie' : 'TV Show'}
-                  </span>
                 </div>
                 <div className="p-3">
-                  <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
-                    {item.title}
-                  </p>
-                  <p className="text-[10px] text-sky-400/90 font-medium mt-0.5">
+                  <p className="text-xs font-semibold text-white line-clamp-1">{item.title}</p>
+                  <p className="text-[10px] text-neutral-400 mt-0.5">
                     ★ {item.vote_average?.toFixed(1) || 'N/A'}
                   </p>
                 </div>
